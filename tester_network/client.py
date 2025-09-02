@@ -60,8 +60,8 @@ def sendCheckStart():
         data = data.split()
         for player in data:
             if player != ip_addr:
-                player_states[player]['x'] = None
-                player_states[player]['y'] = None
+                player_states[player] = {'x': None,
+                                         'y': None}
 
 # sends and recieves updates from server and updates state
 # include powerups updates here too later
@@ -155,5 +155,6 @@ wind = glutCreateWindow(b"OpenGL Coding Practice") #window name
 glutDisplayFunc(showScreen)
 glutIdleFunc(idle)
 glutKeyboardFunc(keyboard)
+
 
 glutMainLoop()
