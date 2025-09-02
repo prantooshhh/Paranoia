@@ -19,6 +19,11 @@ t1 = time()
 
 GRID_LENGTH = 150
 
+controls = {'fw': False,
+            'bw': False,
+            'l': False,
+            'r': False}
+
 game_state = {'over': False,
               'cam': 'fpv'}
 
@@ -179,29 +184,29 @@ class Player:
         self.x = 0
         self.y = 0
         self.z = 0
-        self.speed = 5
+        self.speed = 80
     
-    def rotateLeft(self, ang=5):
-        self.angle += ang
+    def rotateLeft(self, dt, ang=40):
+        self.angle += ang * dt
 
-    def rotateRight(self, ang=5):
-        self.angle -= ang
+    def rotateRight(self, dt, ang=40):
+        self.angle -= ang * dt
 
-    def goForward(self):
+    def goForward(self, dt):
         if -680 <= self.x <= 680 and -680 <= self.y <= 680:
             rad = math.radians(self.angle-90)
-            self.x += math.cos(rad) * self.speed
-            self.y += math.sin(rad) * self.speed
+            self.x += math.cos(rad) * self.speed * dt
+            self.y += math.sin(rad) * self.speed * dt
             if self.x > 680: self.x = 680
             if self.x < -680: self.x = -680
             if self.y > 680: self.y = 680
             if self.y < -680: self.y = -680
 
-    def goBackward(self):
+    def goBackward(self, dt):
         if -680 <= self.x <= 680 and -680 <= self.y <= 680:
             rad = math.radians(self.angle-90)
-            self.x -= math.cos(rad) * self.speed
-            self.y -= math.sin(rad) * self.speed
+            self.x -= math.cos(rad) * self.speed * dt
+            self.y -= math.sin(rad) * self.speed * dt
             if self.x > 680: self.x = 680
             if self.x < -680: self.x = -680
             if self.y > 680: self.y = 680
@@ -295,16 +300,24 @@ def specialKeyListener(key, x, y):
     camera_pos = (x, y, z)
 
 def keyboardListener(key, x, y):
-    global player, game_state
+    global game_state, player
     if not(game_state['over']):
-        if key == b'w': player.goForward()
-        if key == b's': player.goBackward()
-        if key == b'a': player.rotateLeft()
-        if key == b'd': player.rotateRight()
+        if key == b'w': controls['fw'] = True
+        if key == b's': controls['bw'] = True
+        if key == b'a': controls['l'] = True
+        if key == b'd': controls['r'] = True
     
     if key == b'c':
         if game_state['cam'] == 'fpv': game_state['cam'] = 'tpv'
         else: game_state['cam'] = 'fpv'
+
+def keyboardUpListener(key, x, y):
+    global game_state, player
+    if not(game_state['over']):
+        if key == b'w': controls['fw'] = False
+        if key == b's': controls['bw'] = False
+        if key == b'a': controls['l'] = False
+        if key == b'd': controls['r'] = False
     
 
 def mouseListener(button, state, x, y):
@@ -314,7 +327,14 @@ def mouseListener(button, state, x, y):
             pass
 
 def idle():
-    global game_state
+    global game_state, player
+    dt = delT()
+
+    # controls
+    if controls['fw']: player.goForward(dt)
+    if controls['bw']: player.goBackward(dt)
+    if controls['l']: player.rotateLeft(dt)
+    if controls['r']: player.rotateRight(dt)
 
     pass
         
@@ -344,6 +364,7 @@ def main():
 
     glutDisplayFunc(showScreen)  # Register display function
     glutKeyboardFunc(keyboardListener)  # Register keyboard listener
+    glutKeyboardUpFunc(keyboardUpListener)
     glutSpecialFunc(specialKeyListener)
     glutMouseFunc(mouseListener)
     glutIdleFunc(idle)  # Register the idle function to move the bullet automatically
