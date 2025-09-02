@@ -1,11 +1,15 @@
 import json
 import socket
-
-player_states = {}
+import threading
 
 format = "utf-8"
 server_port = 8000
-disconnect_msg = "disconnect"
+connect_msg = 'connect'             # player must send this message to connect, implement this in player code
+disconnect_msg = "disconnect"       # implement this too in player code
+check_start_msg = "s"               # clients send this msg to check start
+not_start_msg = 'wait'
+
+player_states = {}
 
 # Create UDP socket
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -25,30 +29,56 @@ def get_lan_ip():
 
 server_ip = get_lan_ip()
 server_addr = (server_ip, server_port)
+CONNECT_REPLY_MSG = f"You connected to {server_ip}"
 
 # Bind to address
 server.bind(server_addr)
 print(f"UDP Server listening on {server_ip}:{server_port}\n")
 
-while True:
-    # Receive message from client
-    data, client_addr = server.recvfrom(1024)   # max 1024 bytes
-    message = data.decode(format)
+def handleMessage(message, client_addr):
+    player = client_addr[0]
+    message = message.decode(format)
 
-    if client_addr not in player_states:
-        player_states[client_addr[0]] = {'x': None,
-                                      'y': None}
-        print(message)
-        server.sendto("LAN connection successful.".encode(format), client_addr)
+    print(message)
+
+    # start logics
+    if message == check_start_msg:
+        if len(player_states) == 4:
+            # listing the players in a str and send
+            players = []
+            for player in player_states:
+                players.append(player)
+            players = ' '.join(players)
+
+            server.sendto(players.encode(format), client_addr)
+        else:
+            server.sendto(not_start_msg.encode(format), client_addr)
+
+    elif message == connect_msg:
+        player_states[player] = {'x': None,
+                                 'y': None}
+        server.sendto(CONNECT_REPLY_MSG.encode(format), client_addr)
+        print(f"{player} has connected to LAN.")
+        
+    elif message == disconnect_msg:
+        print("Connection terminated with", player)
+        server.sendto("Disconnected.".encode(format), client_addr)
+        return
+    
     else:
-        update = json.loads(message)
-        player_states[client_addr]['x'] = update['x']
-        player_states[client_addr]['y'] = update['y']
+        # updating
+        update_recv = json.loads(message)
+        # for key, val in player_states[player]:
+        #     player_states[player][key] = update[key]
+        player_states[player]['x'] = update_recv['x']
+        player_states[player]['y'] = update_recv['y']
+
+        # sending updates
+        update_send = json.dumps(player_states)
+        server.sendto(update_send.encode(format), client_addr)
         print(player_states)
 
-    #if message == disconnect_msg:
-    #    print(f"Client {client_addr} disconnected.")
-    #    server.sendto("Goodbye.".encode(format), client_addr)
-    #else:
-    #    print(f"From {client_addr}: {message}")
-    #    server.sendto("Message received.".encode(format), client_addr)
+while True:
+    message, client_addr = server.recvfrom(1024)
+    thread = threading.Thread(target=handleMessage, args=(message, client_addr))
+    thread.start()

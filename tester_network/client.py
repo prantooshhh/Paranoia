@@ -8,16 +8,20 @@ import socket
 
 format = "utf-8"
 server_port = 8000
+connect_msg = "connect"
 disconnect_msg = "disconnect"
+check_start_msg = "s"               # clients send this msg to check start
+not_start_msg = 'wait'
+
 last_sent = time()
+
+start = False
+player_states = {}
 
 # Create UDP socket
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# Ask user for server IP
-server_ip = input("Enter server IP: ")
-server_addr = (server_ip, server_port)
-
+# get own ip addr
 def get_lan_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -31,14 +35,60 @@ def get_lan_ip():
     return ip
 ip_addr = get_lan_ip()
 
+# Ask user for server IP
+server_ip = input("Enter server IP: ")
+server_addr = (server_ip, server_port)
 
+
+# send connect_msg to introduce to server
+def sendConnect():
+    client.sendto(connect_msg.encode(format), server_addr)
+    data, _ = client.recvfrom(1024)
+    print(f"Server: {data.decode(format)}\n")
+
+sendConnect()
+
+def sendCheckStart():
+    global start, ip_addr, player_states
+    client.sendto(check_start_msg.encode(format), server_addr)
+    data, _ = client.recvfrom(1024)
+    data = data.decode(format)
+
+    # setting player states and starting game
+    if data != not_start_msg:
+        start = True
+        data = data.split()
+        for player in data:
+            if player != ip_addr:
+                player_states[player]['x'] = None
+                player_states[player]['y'] = None
+
+# sends and recieves updates from server and updates state
+# include powerups updates here too later
+def sendrecvUpdate():
+    global p
+    # sending update of own
+    update_send = {'x': p.x, 
+                   'y': p.y}
+    update_send = json.dumps(update_send)
+    client.sendto(update_send.encode(format), server_addr)
+
+    # receiving updates
+    update_recv, _ = client.recvfrom(1024)
+    update_recv = json.loads(update_recv)
+
+    # exclude own update and update others state
+    for player, info in update_recv.items():
+        if player != ip_addr:
+            player_states[player]['x'] = info['x']
+            player_states[player]['y'] = info['y']
+
+
+# send a msg to server and recieve a reply
 def send(msg):
     client.sendto(msg.encode(format), server_addr)
     data, _ = client.recvfrom(1024)
     print(f"From server: {data.decode(format)}\n")
-
-# Example usage
-send(f"{ip_addr} connected...")
 
 def sendInterval():
     global last_sent
@@ -90,14 +140,12 @@ def showScreen():
 def idle():
     global p
     if sendInterval():
-        update = {'x': p.x,
-                  'y': p.y}
-        update = json.dumps(update)
-        send(update)
-        print("lol")
+        sendrecvUpdate()
     glutPostRedisplay()
 
-
+while not(start):
+    if sendInterval():
+        sendCheckStart()
 
 glutInit()
 glutInitDisplayMode(GLUT_RGBA)
