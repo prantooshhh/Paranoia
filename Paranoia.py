@@ -72,7 +72,7 @@ def setupCamera():
         rad = math.radians(player.angle + 90)
         cx = player.x  # Fixed camera position at player's x
         cy = player.y
-        cz = player.z + 160  # Fixed height above player
+        cz = player.z + 150  # Fixed height above player
         lx = cx - math.cos(rad) * 200  # Rotate look-at point
         ly = cy - math.sin(rad) * 200
         lz = cz - 60  # Maintain downward tilt
@@ -214,74 +214,112 @@ class Player:
 
 player = Player()
 
+def drawCube(w, h,d, color):
+    glPushMatrix()
+    glScalef(w, h, d)
+    glColor3f(*color)
+    glutSolidCube(1.0)
+    glPopMatrix()
+    
 def drawPlayer(p):
     global game_state
     glPushMatrix()
-    if game_state['over']: glRotatef(90, 0, 1, 0)
+    
+    # Apply player transform
+    if game_state['over']:
+        glRotatef(90, 0, 1, 0)  # Tilt if game over
     glTranslatef(p.x, p.y, p.z)
     glRotatef(p.angle, 0, 0, 1)
 
-    # legs
-    glPushMatrix()
-
-    glColor3f(0,0,1)
-    glRotatef(0, 0,0,1)
-    glTranslatef(-14, 0, 0)
-    gluCylinder(gluNewQuadric(), 5, 12, 40, 5, 5)# parameters are: quadric, base radius, top radius, height, slices, stacks
-
-    glTranslatef(28, 0, 0)
-    gluCylinder(gluNewQuadric(), 5, 12, 40, 5, 5)
-
-    glPopMatrix()
-
-    # body
-    glPushMatrix()
-
-    glColor3f(0.2,0.3,0.2)
-    glTranslatef(0, 0, 70)
-    glScalef(1.65, 0.75, 2)
-    glutSolidCube(30)
-
-    glPopMatrix()
-
-    # hands
-    glPushMatrix()
-
-    glColor3f(1,.86,.68)
-    glTranslatef(-15, -10, 92)
-    glRotatef(90, 1, 0, 0)
-    gluCylinder(gluNewQuadric(), 7, 6, 50, 10, 4)
     
-    glPopMatrix()
+    glScalef(40, 40, 40)
 
+    #torso
     glPushMatrix()
-
-    glTranslatef(15, -10, 92)
-    glRotatef(90, 1, 0, 0)
-    gluCylinder(gluNewQuadric(), 7, 6, 50, 10, 4)
-
+    glTranslatef(0, 0, 1)
+    drawCube(1.0, 0.5, 1.5, (0.0, 0.4, 0.2)) 
     glPopMatrix()
 
-    # gun
+    #head
     glPushMatrix()
-
-    glColor3f(.41,.41,.41)
-    glTranslatef(0, -10, 90)
-    glRotatef(90, 1, 0, 0)
-    gluCylinder(gluNewQuadric(), 8, 5, 60, 10, 4)
-
+    glTranslatef(0, 0, 2.4)
+    drawCube(0.8, 0.8, 0.8, (1.0, 0.8, 0.6))  
     glPopMatrix()
-
-    # head
+    #eyes
     glPushMatrix()
+    glTranslatef(0, -0.45, 2.5)  
 
-    glColor3f(0,0,0)
-    glTranslatef(0, 0, 120)
-    gluSphere(gluNewQuadric(), 20, 10, 10)  # parameters are: quadric, radius, slices, stacks
+    
+    glPushMatrix()
+    glTranslatef(-0.2, 0, 0)  
+    drawCube(0.15, 0.05, 0.05, (0,0,0))  
+    glPopMatrix()
 
+    
+    glPushMatrix()
+    glTranslatef(0.2, 0, 0)  
+    drawCube(0.15, 0.05, 0.05, (0,0,0))
     glPopMatrix()
 
     glPopMatrix()
+    #hair remove if its unnecessary
+    glPushMatrix()
+    glTranslatef(0, 0, 2.9)  
+    glScalef(1.0, 1.0, 0.3)  
+    drawCube(0.75, 0.75, 0.75, (0.0, 0.0, 0.0)) 
+    glPopMatrix()
+
+    #rightarm
+    glPushMatrix()
+    glTranslatef(-0.65, 0, 1.9)
+    glRotatef(-80, 1, 0, 0)           
+    glRotatef(10, 0, 1, 0)    
+
+    drawCube(0.4, 0.4, 1.4, (1.0, 0.8, 0.6))  
+    #weapon
+    glPushMatrix()
+    glTranslatef(0, -0.1, -1.5)           
+    glRotatef(10, 0, 1, 0)            
+    glColor3f(0.3, 0.3, 0.3)           
+    gluCylinder(gluNewQuadric(), 0.05, 0.1, 0.8, 8, 2)
+    glPopMatrix()
+
+    glPopMatrix()
+
+    #leftarm
+    glPushMatrix()
+    glTranslatef(0.65, 0, 1.9)
+    glRotatef(30, 1, 0, 0) 
+    drawCube(0.4, 0.4, 1.4, (1.0, 0.8, 0.6))
+    
+    
+    glPushMatrix()
+    glTranslatef(0, 0, 0.2)        
+    glRotatef(-10, 0, 0, 1)        
+    glColor3f(0.5, 0.25, 0.1)     
+    gluCylinder(gluNewQuadric(), 0.1, 0.1, 1.2, 8, 8)  #torch 
+
+    #fire
+    glTranslatef(0, 0, 1.2)      
+    glColor3f(1.0, 0.5, 0.0)       
+    glutSolidCube(0.4)
+
+    glPopMatrix() 
+    glPopMatrix()  
+
+    #legs
+    glPushMatrix()
+    glTranslatef(-0.35, 0, -0.4)
+    drawCube(0.4, 0.4, 1.4, (0.2, 0.1, 0.6)) #right
+    glPopMatrix()
+    
+    glPushMatrix()
+    glTranslatef(0.4, 0, -0.4)
+    drawCube(0.4, 0.4, 1.4, (0.2, 0.1, 0.6))
+    glPopMatrix()
+
+    glPopMatrix()
+
 
 def specialKeyListener(key, x, y):
     global camera_pos, cam_angle, cam_radius, cam_height
