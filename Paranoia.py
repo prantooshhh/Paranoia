@@ -5,6 +5,7 @@ from OpenGL.GLU import *
 import math
 import random
 from time import time
+import numpy as np
 
 width, height = 1200, 690
 
@@ -17,7 +18,7 @@ fovY = 90
 
 t1 = time()
 
-GRID_LENGTH = 150
+GRID_LENGTH = 50
 
 controls = {'fw': False,
             'bw': False,
@@ -72,7 +73,7 @@ def setupCamera():
         rad = math.radians(player.angle + 90)
         cx = player.x  # Fixed camera position at player's x
         cy = player.y
-        cz = player.z + 150  # Fixed height above player
+        cz = player.z + 200  # Fixed height above player
         lx = cx - math.cos(rad) * 200  # Rotate look-at point
         ly = cy - math.sin(rad) * 200
         lz = cz - 60  # Maintain downward tilt
@@ -104,78 +105,135 @@ def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18): # type: ignore
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)
 
-# 4 rectangles of a block
-def gridBlock(x, y):
-    global GRID_LENGTH
-    glBegin(GL_QUADS)
+# mapping the grid
+# 0 - black, 1 - wall, 2 - free space
 
-    glColor3f(1, 1, 1)
-    
-    glVertex3f(GRID_LENGTH+x, 0+y, 0)
-    glVertex3f(0+x, 0+y, 0)
-    glVertex3f(0+x, -GRID_LENGTH+y, 0)
-    glVertex3f(GRID_LENGTH+x, -GRID_LENGTH+y, 0)
+def makeMap():
+    map_outline = np.array([[2 for _ in range(102)] for _ in range(102)])
+    map_outline[0, :] = 1
+    map_outline[-1, :] = 1
+    map_outline[:, 0] = 1
+    map_outline[:, -1] = 1
 
-    glVertex3f(0+x, 0+y, 0)
-    glVertex3f(-GRID_LENGTH+x, 0+y, 0)
-    glVertex3f(-GRID_LENGTH+x, GRID_LENGTH+y, 0)
-    glVertex3f(0+x, GRID_LENGTH+y, 0)
+    # section 1
+    map_outline[20, :11] = 1
+    map_outline[20:81, 10] = 1
+    map_outline[80, 1:10] = 1
+    map_outline[30, 11:21] = 1
+    map_outline[21:80, 0:10] = 0
 
-    glColor3f(0.7, 0.5, 0.95)
+    # section 2
+    map_outline[1:11, 10] = 1
+    map_outline[10, 10:55] = 1
+    map_outline[10:25, 54] = 1
+    map_outline[24, 54:66] = 1
+    map_outline[10:36, 65] = 1
+    map_outline[10, 65:91] = 1
+    map_outline[1:11, 90] = 1
+    map_outline[11:31, 28] = 1
+    map_outline[0:10, 11:90] = 0
+    map_outline[10:24, 55:65] = 0
 
-    glVertex3f(0+x, -GRID_LENGTH+y, 0)
-    glVertex3f(-GRID_LENGTH+x, -GRID_LENGTH+y, 0)
-    glVertex3f(-GRID_LENGTH+x, 0+y, 0)
-    glVertex3f(0+x, 0+y, 0)
+    # section 3
+    map_outline[91:101, 10] = 1
+    map_outline[91, 10:53] = 1
+    map_outline[77:91, 52] = 1
+    map_outline[77, 52:61] = 1
+    map_outline[77:92, 60] = 1
+    map_outline[91, 60:91] = 1
+    map_outline[91:101, 90] = 1
+    map_outline[71:91, 40] = 1
+    map_outline[92:102, 11:90] = 0
+    map_outline[78:92, 53:60] = 0
 
-    glVertex3f(GRID_LENGTH+x, 0+y, 0)
-    glVertex3f(0+x, 0+y, 0)
-    glVertex3f(0+x, GRID_LENGTH+y, 0)
-    glVertex3f(GRID_LENGTH+x, GRID_LENGTH+y, 0)
+    # section 4
+    map_outline[20, 90:101] = 1
+    map_outline[20:81, 90] = 1
+    map_outline[80, 90:101] = 1
+    map_outline[35, 75:90] = 1
+    map_outline[21:80, 91:102] = 0
 
-    glEnd()
+    # section 5
+    map_outline[40:76, 28] = 1
+    map_outline[75, 20:29] = 1
+    map_outline[57:76, 20] = 1
+    map_outline[57, 20:28] = 1
+    map_outline[58:75, 21:28] = 0
 
-# a block of grid iterated in a loop to replicate
-def grid():
-    grid_size = 1200
+    # section 6
+    map_outline[32:58, 40] = 1
+    map_outline[57, 40:61] = 1
+    map_outline[51:58, 60] = 1
+    map_outline[50, 40:74] = 1
+    map_outline[50:77, 73] = 1
+    map_outline[51:57, 41:60] = 0
 
-    for i in range(-grid_size//2, grid_size//2+1, 300):
-        for j in range(-grid_size//2, grid_size//2+1, 300):
-            gridBlock(i,j)
+    # section 7
+    map_outline[64, 40:61] = 1
+    return map_outline
 
-    gridBorders(grid_size)
+map = makeMap()
 
-# borders of grid
-def gridBorders(size):
-    size += 300
-    border_size = 125
-    glBegin(GL_QUADS)
+def drawMap():
+    global GRID_LENGTH, map, player
+    grid_mid = GRID_LENGTH/2
+    for i in range(len(map)):
+        for j in range(len(map)):
+            if map[i][j] == 1:      # for wall use this as reference, for testing call drawWall() in here
+                x = (i - len(map)//2) * GRID_LENGTH
+                y = (j - len(map)//2) * GRID_LENGTH
 
-    glColor3f(0,1,1)
-    glVertex3f(size/2, -size/2, border_size)
-    glVertex3f(-size/2, -size/2, border_size)
-    glVertex3f(-size/2, -size/2, 0)
-    glVertex3f(size/2, -size/2, 0)
+                glBegin(GL_QUADS)
+                glColor3f(1, 1, 1)
+                glVertex3f(x + GRID_LENGTH, y, 0)
+                glVertex3f(x, y, 0)
+                glVertex3f(x, y - GRID_LENGTH, 0)
+                glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
+                glEnd()
 
-    glColor3f(0,0,1)
-    glVertex3f(-size/2, -size/2, border_size)
-    glVertex3f(-size/2, size/2, border_size)
-    glVertex3f(-size/2, size/2, 0)
-    glVertex3f(-size/2, -size/2, 0)
+            elif map[i][j] == 2:    # for free space use this as reference, for testing call drawBlock() in here
+                x = (i - len(map)//2) * GRID_LENGTH
+                y = (j - len(map)//2) * GRID_LENGTH
 
-    glColor3f(0,1,0)
-    glVertex3f(size/2, -size/2, border_size)
-    glVertex3f(size/2, size/2, border_size)
-    glVertex3f(size/2, size/2, 0)
-    glVertex3f(size/2, -size/2, 0)
+                glBegin(GL_QUADS)
+                glColor3f(1, 0, 0)
+                glVertex3f(x + GRID_LENGTH, y, 0)
+                glVertex3f(x, y, 0)
+                glVertex3f(x, y - GRID_LENGTH, 0)
+                glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
+                glEnd()
 
-    glColor3f(1,1,1)
-    glVertex3f(size/2, size/2, border_size)
-    glVertex3f(-size/2, size/2, border_size)
-    glVertex3f(-size/2, size/2, 0)
-    glVertex3f(size/2, size/2, 0)
+    # optimized draw
+    # player_pos = (int(player.x//GRID_LENGTH + len(map)//2), int(player.y//GRID_LENGTH + len(map)//2))
+    # for i in range(player_pos[0]-20, player_pos[0]+21):
+    #     for j in range(player_pos[1]-20, player_pos[1]+21):
+    #         if i > 101 or j > 101: continue
+    #         if map[i][j] == 1:
+    #             x = (i - len(map)//2) * GRID_LENGTH
+    #             y = (j - len(map)//2) * GRID_LENGTH
+    #             glBegin(GL_QUADS)
+    #             glColor3f(1, 1, 1)
+    #             glVertex3f(x + GRID_LENGTH, y, 0)
+    #             glVertex3f(x, y, 0)
+    #             glVertex3f(x, y - GRID_LENGTH, 0)
+    #             glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
+    #             glEnd()
+    #         elif map[i][j] == 2:
+    #             x = (i - len(map)//2) * GRID_LENGTH
+    #             y = (j - len(map)//2) * GRID_LENGTH
+    #             glBegin(GL_QUADS)
+    #             glColor3f(1, 0, 0)
+    #             glVertex3f(x + GRID_LENGTH, y, 0)
+    #             glVertex3f(x, y, 0)
+    #             glVertex3f(x, y - GRID_LENGTH, 0)
+    #             glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
+    #             glEnd()
 
-    glEnd()
+def drawBlock():
+    pass
+
+def drawWall():
+    pass
 
 class Player:
     global GRID_LENGTH
@@ -193,24 +251,35 @@ class Player:
         self.angle -= ang * dt
 
     def goForward(self, dt):
-        if -680 <= self.x <= 680 and -680 <= self.y <= 680:
-            rad = math.radians(self.angle-90)
-            self.x += math.cos(rad) * self.speed * dt
-            self.y += math.sin(rad) * self.speed * dt
-            if self.x > 680: self.x = 680
-            if self.x < -680: self.x = -680
-            if self.y > 680: self.y = 680
-            if self.y < -680: self.y = -680
+        rad = math.radians(self.angle-90)
+        self.x += math.cos(rad) * self.speed * dt
+        self.y += math.sin(rad) * self.speed * dt
+
+        # border logics (remove upper lines in final)
+        # if -680 <= self.x <= 680 and -680 <= self.y <= 680:
+        #     rad = math.radians(self.angle-90)
+        #     self.x += math.cos(rad) * self.speed * dt
+        #     self.y += math.sin(rad) * self.speed * dt
+
+        #     if self.x > 680: self.x = 680
+        #     if self.x < -680: self.x = -680
+        #     if self.y > 680: self.y = 680
+        #     if self.y < -680: self.y = -680
 
     def goBackward(self, dt):
-        if -680 <= self.x <= 680 and -680 <= self.y <= 680:
-            rad = math.radians(self.angle-90)
-            self.x -= math.cos(rad) * self.speed * dt
-            self.y -= math.sin(rad) * self.speed * dt
-            if self.x > 680: self.x = 680
-            if self.x < -680: self.x = -680
-            if self.y > 680: self.y = 680
-            if self.y < -680: self.y = -680
+        rad = math.radians(self.angle-90)
+        self.x -= math.cos(rad) * self.speed * dt
+        self.y -= math.sin(rad) * self.speed * dt
+
+        # border logics (remove upper lines in final)
+        # if -680 <= self.x <= 680 and -680 <= self.y <= 680:
+        #     rad = math.radians(self.angle-90)
+        #     self.x -= math.cos(rad) * self.speed * dt
+        #     self.y -= math.sin(rad) * self.speed * dt
+        #     if self.x > 680: self.x = 680
+        #     if self.x < -680: self.x = -680
+        #     if self.y > 680: self.y = 680
+        #     if self.y < -680: self.y = -680
 
 player = Player()
 
@@ -228,7 +297,7 @@ def drawPlayer(p):
     # Apply player transform
     if game_state['over']:
         glRotatef(90, 0, 1, 0)  # Tilt if game over
-    glTranslatef(p.x, p.y, p.z)
+    glTranslatef(p.x, p.y, p.z+50)
     glRotatef(p.angle, 0, 0, 1)
 
     
@@ -387,8 +456,10 @@ def showScreen():
 
     setupCamera()  # Configure camera perspective
 
-    grid()
+    #grid()
+    
     drawPlayer(player)
+    drawMap()
 
     glutSwapBuffers()
 
