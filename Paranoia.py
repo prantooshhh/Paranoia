@@ -221,21 +221,7 @@ def drawMap():
 def drawBlock():
     pass
 
-def drawWall(i, j):
-    global GRID_LENGTH, map 
-    x = (i - len(map)//2) * GRID_LENGTH
-    y = (j - len(map)//2) * GRID_LENGTH
-    
-    glPushMatrix()
-    glTranslatef(x + 25, y - 25, 80)
-    glScalef(1, 1, 4)
-    glColor3f(.2,.2,.2)
-    # if player.active_blocks[i][j] == 1:
-    #     glColor3f(0.05, 0.05, 0.05) 
-    # if player.active_blocks[i][j] == 2:
-    #     glColor3f(*colorFunc(x+25, y-25, 1, 1, 1))
-    glutSolidCube(50)
-    glPopMatrix()
+def drawWall():
 
 
 sin_table = [math.sin(math.radians(a)) for a in range(360)]
@@ -505,79 +491,7 @@ def drawPlayer(p):
 
     glPopMatrix()
 
-def draw_creature(x, y, z):
-    global player
-    glPushMatrix()
-    ang = math.degrees(math.atan2(player.y - y, player.x - x)) + 90
-    glTranslatef(x, y, z)
-    glRotatef(ang, 0, 0, 1)
-    glScalef(1.3, 1.3, 1.3)
-    
 
-    glPushMatrix()
-    glTranslatef(0, 0, 90) 
-    glScalef(30, 20, 60)   
-    glColor3f(0.1, 0.1, 0.1)  
-    glutSolidCube(1)
-    glPopMatrix()
-    
-    # Head
-    glPushMatrix()
-    glTranslatef(0, 0, 135)  
-    glScalef(25, 25, 25)     
-    glColor3f(0.15, 0.15, 0.15)  
-    glutSolidCube(1)
-    glPopMatrix()
-    
-    # Left eye
-    glPushMatrix()
-    glTranslatef(-8, -15, 135) 
-    glScalef(4, 2, 4)
-    glColor3f(1.0, 0.0, 0.0) 
-    glutSolidCube(1.0)
-    glPopMatrix()
-    
-    # Right eye  
-    glPushMatrix()
-    glTranslatef(8, -15, 135)   
-    glScalef(4, 2, 4)
-    glColor3f(1.0, 0.0, 0.0)   #
-    glutSolidCube(1.0)
-    glPopMatrix()
-    
-    # Left arm
-    glPushMatrix()
-    glTranslatef(-20, 0, 80)    
-    glScalef(8, 8, 70)          
-    glColor3f(0.1, 0.1, 0.1)
-    glutSolidCube(1.0)
-    glPopMatrix()
-    
-    # Right arm
-    glPushMatrix()
-    glTranslatef(20, 0, 80)   
-    glScalef(8, 8, 70)        
-    glColor3f(0.1, 0.1, 0.1)
-    glutSolidCube(1.0)
-    glPopMatrix()
-    
-    # Left leg
-    glPushMatrix()
-    glTranslatef(-8, 0, 30)     
-    glScalef(8, 8, 60)          
-    glColor3f(0.1, 0.1, 0.1)
-    glutSolidCube(1.0)
-    glPopMatrix()
-    
-    # Right leg
-    glPushMatrix()
-    glTranslatef(8, 0, 30)     
-    glScalef(8, 8, 60)          
-    glColor3f(0.1, 0.1, 0.1)
-    glutSolidCube(1.0)
-    glPopMatrix()
-    
-    glPopMatrix()
 def specialKeyListener(key, x, y):
     global camera_pos, cam_angle, cam_radius, cam_height
     x, y, z = camera_pos
@@ -648,8 +562,7 @@ def showScreen():
     
     drawPlayer(player)
     drawMap()
-    drawWall()
-    draw_creature()        
+       
     glutSwapBuffers()
 
 def main():
@@ -672,6 +585,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
