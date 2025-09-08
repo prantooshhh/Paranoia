@@ -221,8 +221,21 @@ def drawMap():
 def drawBlock():
     pass
 
-def drawWall():
-    pass
+def drawWall(i, j):
+    global GRID_LENGTH, map 
+    x = (i - len(map)//2) * GRID_LENGTH
+    y = (j - len(map)//2) * GRID_LENGTH
+    
+    glPushMatrix()
+    glTranslatef(x + 25, y - 25, 80)
+    glScalef(1, 1, 4)
+    glColor3f(.2,.2,.2)
+    # if player.active_blocks[i][j] == 1:
+    #     glColor3f(0.05, 0.05, 0.05) 
+    # if player.active_blocks[i][j] == 2:
+    #     glColor3f(*colorFunc(x+25, y-25, 1, 1, 1))
+    glutSolidCube(50)
+    glPopMatrix()
 
 
 sin_table = [math.sin(math.radians(a)) for a in range(360)]
@@ -586,3 +599,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
