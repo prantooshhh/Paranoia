@@ -10,7 +10,7 @@ import numpy as np
 width, height = 1200, 690
 
 cam_angle = math.pi/2
-cam_radius = 800  
+cam_radius = 800
 cam_height = 800
 camera_pos = (cam_radius * math.cos(cam_angle), cam_radius * math.sin(cam_angle), cam_height)
 look_at = (0, 0, 0)
@@ -177,57 +177,46 @@ map = makeMap()
 def drawMap():
     global GRID_LENGTH, map, player
     grid_mid = GRID_LENGTH/2
-    for i in range(len(map)):
-        for j in range(len(map)):
-            if map[i][j] == 1:      # for wall use this as reference, for testing call drawWall() in here
-                x = (i - len(map)//2) * GRID_LENGTH
-                y = (j - len(map)//2) * GRID_LENGTH
 
-                glBegin(GL_QUADS)
-                glColor3f(1, 1, 1)
-                glVertex3f(x + GRID_LENGTH, y, 0)
-                glVertex3f(x, y, 0)
-                glVertex3f(x, y - GRID_LENGTH, 0)
-                glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
-                glEnd()
+    for i in range(len(player.active_blocks)):
+        for j in range(len(player.active_blocks)):
+            if player.active_blocks[i][j]:
+                if map[i][j] == 1:      # for wall use this as reference, for testing call drawWall() in here
+                    x = (i - len(map)//2) * GRID_LENGTH
+                    y = (j - len(map)//2) * GRID_LENGTH
 
-            elif map[i][j] == 2:    # for free space use this as reference, for testing call drawBlock() in here
-                x = (i - len(map)//2) * GRID_LENGTH
-                y = (j - len(map)//2) * GRID_LENGTH
+                    glBegin(GL_QUADS)
+                    if player.active_blocks[i][j] == 1:
+                        glColor3f(0.05, 0.05, 0.05) 
+                    if player.active_blocks[i][j] == 2:
+                        glColor3f(*colorFunc(x+25, y-25, 1, 1, 1))
+                    glVertex3f(x + GRID_LENGTH, y, 0)
+                    glVertex3f(x, y, 0)
+                    glVertex3f(x, y - GRID_LENGTH, 0)
+                    glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
+                    glEnd()
 
-                glBegin(GL_QUADS)
-                glColor3f(1, 0, 0)
-                glVertex3f(x + GRID_LENGTH, y, 0)
-                glVertex3f(x, y, 0)
-                glVertex3f(x, y - GRID_LENGTH, 0)
-                glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
-                glEnd()
+                    # glPointSize(5)
+                    # glBegin(GL_POINTS)
+                    # glColor3f(0, 1, 0)
+                    # glVertex3f(x+25, y-25, 0) # center point of the block
+                    # dglEnd()
 
-    # optimized draw
-    # player_pos = (int(player.x//GRID_LENGTH + len(map)//2), int(player.y//GRID_LENGTH + len(map)//2))
-    # for i in range(player_pos[0]-20, player_pos[0]+21):
-    #     for j in range(player_pos[1]-20, player_pos[1]+21):
-    #         if i > 101 or j > 101: continue
-    #         if map[i][j] == 1:
-    #             x = (i - len(map)//2) * GRID_LENGTH
-    #             y = (j - len(map)//2) * GRID_LENGTH
-    #             glBegin(GL_QUADS)
-    #             glColor3f(1, 1, 1)
-    #             glVertex3f(x + GRID_LENGTH, y, 0)
-    #             glVertex3f(x, y, 0)
-    #             glVertex3f(x, y - GRID_LENGTH, 0)
-    #             glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
-    #             glEnd()
-    #         elif map[i][j] == 2:
-    #             x = (i - len(map)//2) * GRID_LENGTH
-    #             y = (j - len(map)//2) * GRID_LENGTH
-    #             glBegin(GL_QUADS)
-    #             glColor3f(1, 0, 0)
-    #             glVertex3f(x + GRID_LENGTH, y, 0)
-    #             glVertex3f(x, y, 0)
-    #             glVertex3f(x, y - GRID_LENGTH, 0)
-    #             glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
-    #             glEnd()
+
+                elif map[i][j] == 2:    # for free space use this as reference, for testing call drawBlock() in here
+                    x = (i - len(map)//2) * GRID_LENGTH
+                    y = (j - len(map)//2) * GRID_LENGTH
+
+                    glBegin(GL_QUADS)
+                    if player.active_blocks[i][j] == 1:
+                        glColor3f(0.05, 0.05*0, 0.05*0) 
+                    if player.active_blocks[i][j] == 2:
+                        glColor3f(*colorFunc(x+25, y-25, 1, 0, 0))
+                    glVertex3f(x + GRID_LENGTH, y, 0)
+                    glVertex3f(x, y, 0)
+                    glVertex3f(x, y - GRID_LENGTH, 0)
+                    glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
+                    glEnd()
 
 def drawBlock():
     pass
@@ -235,51 +224,165 @@ def drawBlock():
 def drawWall():
     pass
 
+
+sin_table = [math.sin(math.radians(a)) for a in range(360)]
+cos_table = [math.cos(math.radians(a)) for a in range(360)]
 class Player:
-    global GRID_LENGTH
+    global GRID_LENGTH, wall_coords
     def __init__(self):
         self.angle = 0
-        self.x = 0
-        self.y = 0
+        self.x = -100
+        self.y = 50
         self.z = 0
         self.speed = 80
+        self.view_range = 600
+        self.active_blocks = np.zeros((len(map), len(map)), dtype=np.float32)
+        self.activeBlocks()
     
     def rotateLeft(self, dt, ang=40):
         self.angle += ang * dt
+        self.activeBlocks()
 
     def rotateRight(self, dt, ang=40):
         self.angle -= ang * dt
+        self.activeBlocks()
 
     def goForward(self, dt):
         rad = math.radians(self.angle-90)
-        self.x += math.cos(rad) * self.speed * dt
-        self.y += math.sin(rad) * self.speed * dt
+        next_x = self.x + math.cos(rad) * self.speed * dt
+        next_y = self.y + math.sin(rad) * self.speed * dt
 
-        # border logics (remove upper lines in final)
-        # if -680 <= self.x <= 680 and -680 <= self.y <= 680:
-        #     rad = math.radians(self.angle-90)
-        #     self.x += math.cos(rad) * self.speed * dt
-        #     self.y += math.sin(rad) * self.speed * dt
+        next_i = int((next_x) // GRID_LENGTH + len(map)//2)
+        next_j = int((next_y) // GRID_LENGTH + len(map)//2) + 1
 
-        #     if self.x > 680: self.x = 680
-        #     if self.x < -680: self.x = -680
-        #     if self.y > 680: self.y = 680
-        #     if self.y < -680: self.y = -680
+        next_i_offset_plus = int((next_x + 25) // GRID_LENGTH + len(map)//2)
+        next_j_offset_plus = int((next_y + 25) // GRID_LENGTH + len(map)//2) + 1
+        next_i_offset_minus = int((next_x - 25) // GRID_LENGTH + len(map)//2)
+        next_j_offset_minus = int((next_y - 25) // GRID_LENGTH + len(map)//2) + 1
+
+        collision_x = False
+        collision_y = False
+
+        if map[next_i_offset_plus][next_j] == 1 or map[next_i_offset_minus][next_j] == 1: collision_x = True
+        if map[next_i][next_j_offset_plus] == 1 or map[next_i][next_j_offset_minus] == 1: collision_y = True
+
+        if not collision_x: self.x = next_x
+        if not collision_y: self.y = next_y
+        # print(self.x, self.y)
+        self.activeBlocks()
 
     def goBackward(self, dt):
         rad = math.radians(self.angle-90)
-        self.x -= math.cos(rad) * self.speed * dt
-        self.y -= math.sin(rad) * self.speed * dt
+        next_x = self.x - math.cos(rad) * self.speed * dt
+        next_y = self.y - math.sin(rad) * self.speed * dt
 
-        # border logics (remove upper lines in final)
-        # if -680 <= self.x <= 680 and -680 <= self.y <= 680:
-        #     rad = math.radians(self.angle-90)
-        #     self.x -= math.cos(rad) * self.speed * dt
-        #     self.y -= math.sin(rad) * self.speed * dt
-        #     if self.x > 680: self.x = 680
-        #     if self.x < -680: self.x = -680
-        #     if self.y > 680: self.y = 680
-        #     if self.y < -680: self.y = -680
+        next_i = int((next_x) // GRID_LENGTH + len(map)//2)
+        next_j = int((next_y) // GRID_LENGTH + len(map)//2) + 1
+
+        next_i_offset_plus = int((next_x + 25) // GRID_LENGTH + len(map)//2)
+        next_j_offset_plus = int((next_y + 25) // GRID_LENGTH + len(map)//2) + 1
+        next_i_offset_minus = int((next_x - 25) // GRID_LENGTH + len(map)//2)
+        next_j_offset_minus = int((next_y - 25) // GRID_LENGTH + len(map)//2) + 1
+
+        collision_x = False
+        collision_y = False
+
+        if map[next_i_offset_plus][next_j] == 1 or map[next_i_offset_minus][next_j] == 1: collision_x = True
+        if map[next_i][next_j_offset_plus] == 1 or map[next_i][next_j_offset_minus] == 1: collision_y = True
+
+        if not collision_x: self.x = next_x
+        if not collision_y: self.y = next_y
+        self.activeBlocks()
+
+    def activeBlocks(self, max_blocks=50, cone_angle=45, cone_range=15):
+        """
+        0 - not rendered
+        1 - rendered but not in range
+        2 - rendered and in range
+        """
+        n = len(map)
+        self.active_blocks = np.zeros((len(map), len(map)), dtype=np.float32)
+
+        px, py = int(self.x), int(self.y)
+        p_angle = (self.angle-45) % 360
+        pxi, pyi = int(px//GRID_LENGTH + n//2), int(py//GRID_LENGTH + n//2)
+
+        # around blocks
+        self.active_blocks[max(pxi-17,0):min(pxi+18,n), max(pyi-17,0):min(pyi+18,n)] = 1
+
+        # cone blocks
+        cone_blocks = findConeBlocks(pxi, pyi, p_angle)
+        # print(cone_blocks)
+        for i, j in cone_blocks:
+            if 0 <= i < n and 0 <= j < n:
+                self.active_blocks[i, j] = 2
+            
+view_angle = 60
+def colorFunc(x, y, r, g, b):
+    global player
+    vx, vy = x-player.x, y-player.y
+    dist = math.sqrt(vx**2 + vy**2)
+
+    if dist == 0:
+        bright = 1
+    else:
+        vx, vy = vx/dist, vy/dist
+
+        dx = sin_table[int(player.angle%360)]
+        dy = -cos_table[int(player.angle%360)]
+        dlen = math.sqrt(dx**2 + dy**2)
+        dx, dy = dx/dlen, dy/dlen
+
+        dot = vx*dx + vy*dy
+
+        angle_fac = max(0, (dot - cos_table[view_angle]) / (1 - cos_table[view_angle]))
+        dist_fac = max(1, 1 - (dist / view_range))
+
+        bright = 0.05 + 0.95 * angle_fac * dist_fac
+    return bright*r, bright*g, bright*b
+
+view_range=15
+view_angle=60
+view_range_sq = view_range * view_range
+
+def findConeBlocks(x, y, dir_angle):
+    global view_range, view_angle, view_range_sq
+    blockij = set()
+    rad = math.radians(dir_angle-45)
+    fx = math.cos(rad)
+    fy = math.sin(rad)
+
+    half_view_angle = math.radians(view_angle / 2)
+
+    for dx in range(-view_range, view_range+1):
+        for dy in range(-view_range, view_range+1):
+            if not(dx) and not(dy):
+                blockij.add((x, y))
+                continue
+
+            vx, vy = dx, dy
+            dist_sq = vx*vx + vy*vy
+            if dist_sq > view_range_sq:
+                continue
+
+            dist = math.sqrt(dist_sq)
+            vx, vy = vx/dist, vy/dist
+            dot = fx*vx + fy*vy
+            angle = math.acos(max(-1, min(1, dot)))
+
+            if angle <= half_view_angle:
+                steps = int(dist)
+                sight_hit_wall = False
+                for b in range(1, steps+1):
+                    bx = int(x + vx * b)
+                    by = int(y + vy * b)
+                    if map[bx][by] == 1 and 0 <= bx < len(map) and 0 <= by < len(map):
+                        sight_hit_wall = True
+                        break
+                if not(sight_hit_wall):
+                    blockij.add((x+dx, y+dy))
+                
+    return blockij
 
 player = Player()
 
@@ -483,4 +586,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
