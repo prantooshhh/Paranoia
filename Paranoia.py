@@ -10,7 +10,7 @@ import numpy as np
 width, height = 1200, 690
 
 cam_angle = math.pi/2
-cam_radius = 800
+cam_radius = 800  
 cam_height = 800
 camera_pos = (cam_radius * math.cos(cam_angle), cam_radius * math.sin(cam_angle), cam_height)
 look_at = (0, 0, 0)
@@ -483,3 +483,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
