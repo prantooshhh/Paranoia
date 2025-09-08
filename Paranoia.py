@@ -648,7 +648,8 @@ def showScreen():
     
     drawPlayer(player)
     drawMap()
-
+    drawWall()
+    draw_creature()        
     glutSwapBuffers()
 
 def main():
@@ -671,5 +672,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
