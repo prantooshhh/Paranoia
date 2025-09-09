@@ -193,22 +193,25 @@ def drawMap():
 
 
                 elif map[i][j] == 2:    # for free space use this as reference, for testing call drawBlock() in here
-                    x = (i - len(map)//2) * GRID_LENGTH
-                    y = (j - len(map)//2) * GRID_LENGTH
+                    drawTempBlock(i, j)
 
-                    glBegin(GL_QUADS)
-                    glColor3f(*colorFunc(x+25, y-25, 1, 0, 0))
-                    # if player.active_blocks[i][j] == 1:
-                    #     glColor3f(0.05, 0.05*0, 0.05*0) 
-                    # if player.active_blocks[i][j] == 2:
-                    #     glColor3f(*colorFunc(x+25, y-25, 1, 0, 0))
-                    glVertex3f(x + GRID_LENGTH, y, 0)
-                    glVertex3f(x, y, 0)
-                    glVertex3f(x, y - GRID_LENGTH, 0)
-                    glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
-                    glEnd()
+def drawTempBlock(i, j):
+    x = (i - len(map)//2) * GRID_LENGTH
+    y = (j - len(map)//2) * GRID_LENGTH
 
-def drawBlock():
+    glBegin(GL_QUADS)
+    glColor3f(*colorFunc(x+25, y-25, 1, 0, 0))
+    # if player.active_blocks[i][j] == 1:
+    #     glColor3f(0.05, 0.05*0, 0.05*0) 
+    # if player.active_blocks[i][j] == 2:
+    #     glColor3f(*colorFunc(x+25, y-25, 1, 0, 0))
+    glVertex3f(x + GRID_LENGTH, y, 0)
+    glVertex3f(x, y, 0)
+    glVertex3f(x, y - GRID_LENGTH, 0)
+    glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
+    glEnd()
+
+def drawBlock(i, j):
     pass
 
 def drawWall(i, j):
@@ -229,6 +232,45 @@ def drawWall(i, j):
     glPopMatrix()
 
 
+view_angle=45
+def findConeBlocks(x, y, dir_angle, player):
+    blockij = set()
+    rad = math.radians(dir_angle-45)
+    fx = math.cos(rad)
+    fy = math.sin(rad)
+
+    half_view_angle = math.radians(view_angle / 2)
+
+    for dx in range(-player.view_range_active, player.view_range_active+1):
+        for dy in range(-player.view_range_active, player.view_range_active+1):
+            if not(dx) and not(dy):
+                blockij.add((x, y))
+                continue
+
+            vx, vy = dx, dy
+            dist_sq = vx*vx + vy*vy
+            if dist_sq > player.view_range_active**2:
+                continue
+
+            dist = math.sqrt(dist_sq)
+            vx, vy = vx/dist, vy/dist
+            dot = fx*vx + fy*vy
+            angle = math.acos(max(-1, min(1, dot)))
+
+            if angle <= half_view_angle:
+                steps = int(dist)
+                sight_hit_wall = False
+                for b in range(1, steps+1):
+                    bx = int(x + vx * b)
+                    by = int(y + vy * b)
+                    if map[bx][by] == 1 and 0 <= bx < len(map) and 0 <= by < len(map):
+                        sight_hit_wall = True
+                        break
+                if not(sight_hit_wall):
+                    blockij.add((x+dx, y+dy))
+    # print(blockij)
+    return blockij
+
 sin_table = [math.sin(math.radians(a)) for a in range(360)]
 cos_table = [math.cos(math.radians(a)) for a in range(360)]
 class Player:
@@ -239,7 +281,8 @@ class Player:
         self.y = 50
         self.z = 0
         self.speed = 120
-        self.view_range = 600
+        self.view_range = 450
+        self.view_range_active = 5
         self.active_blocks = np.zeros((len(map), len(map)), dtype=np.float32)
         self.activeBlocks()
     
@@ -315,19 +358,21 @@ class Player:
         self.active_blocks[max(pxi-17,0):min(pxi+18,n), max(pyi-17,0):min(pyi+18,n)] = 1
 
         # cone blocks
-        cone_blocks = findConeBlocks(pxi, pyi, p_angle)
+        cone_blocks = findConeBlocks(pxi, pyi, p_angle, self)
         # print(cone_blocks)
         for i, j in cone_blocks:
             if 0 <= i < n and 0 <= j < n:
                 self.active_blocks[i, j] = 2
-            
+
+player = Player()
+
 view_angle = 45
 def colorFunc(x, y, r, g, b):
     global player
     vx, vy = x-player.x, y-player.y
     dist = math.sqrt(vx**2 + vy**2)
 
-    if dist > 600:
+    if dist > player.view_range:
         bright = 0.05
     elif dist == 0:
         bright = 1
@@ -342,55 +387,10 @@ def colorFunc(x, y, r, g, b):
         dot = vx*dx + vy*dy
 
         angle_fac = max(0, (dot - cos_table[view_angle]) / (1 - cos_table[view_angle]))
-        dist_fac = max(1, 1 - (dist / view_range))
+        dist_fac = max(1, 1 - (dist / player.view_range))
 
         bright = 0.05 + 0.95 * angle_fac * dist_fac
     return bright*r, bright*g, bright*b
-
-view_range=5
-view_angle=45
-view_range_sq = view_range * view_range
-
-def findConeBlocks(x, y, dir_angle):
-    global view_range, view_angle, view_range_sq
-    blockij = set()
-    rad = math.radians(dir_angle-45)
-    fx = math.cos(rad)
-    fy = math.sin(rad)
-
-    half_view_angle = math.radians(view_angle / 2)
-
-    for dx in range(-view_range, view_range+1):
-        for dy in range(-view_range, view_range+1):
-            if not(dx) and not(dy):
-                blockij.add((x, y))
-                continue
-
-            vx, vy = dx, dy
-            dist_sq = vx*vx + vy*vy
-            if dist_sq > view_range_sq:
-                continue
-
-            dist = math.sqrt(dist_sq)
-            vx, vy = vx/dist, vy/dist
-            dot = fx*vx + fy*vy
-            angle = math.acos(max(-1, min(1, dot)))
-
-            if angle <= half_view_angle:
-                steps = int(dist)
-                sight_hit_wall = False
-                for b in range(1, steps+1):
-                    bx = int(x + vx * b)
-                    by = int(y + vy * b)
-                    if map[bx][by] == 1 and 0 <= bx < len(map) and 0 <= by < len(map):
-                        sight_hit_wall = True
-                        break
-                if not(sight_hit_wall):
-                    blockij.add((x+dx, y+dy))
-    # print(blockij)
-    return blockij
-
-player = Player()
 
 def drawCube(w, h,d, color):
     glPushMatrix()
