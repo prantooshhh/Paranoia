@@ -197,9 +197,9 @@ def draw_text(x, y, text, font=GLUT_BITMAP_TIMES_ROMAN_24): # type: ignore
 intro_str = 0
 intro_fps = 20
 introT = time()
-intro_text = ["You wake up surrounded by deafening silence and darkness.....",
-              "There's a torch and....a gun?",
-              "Suddenly there are distant sounds of quiet rustling and footsteps ",
+intro_text = ["You wake up surrounded by a deafening silence and darkness.....",
+              "There's a torch and......a gun?",
+              "Suddenly there are distant sounds of quiet rustling and footsteps! ",
               '',
               "The only way out is through.",
               "", "",
@@ -225,6 +225,7 @@ def draw_intro():
 def draw_menu():
     glColor3f(1,0 ,0 )
     draw_text(400, 500, "PARANOIA", GLUT_BITMAP_TIMES_ROMAN_24)
+    draw_text(300, 450, "someone will have to end this nightmare first.....", GLUT_BITMAP_TIMES_ROMAN_24)
     draw_text(200, 300, "Press ENTER to Start",GLUT_BITMAP_HELVETICA_12)
     draw_text(200, 270, "Use W-A-S_D to move around", GLUT_BITMAP_HELVETICA_12)
     draw_text(200, 250, "Collect artifacts to use powerups", GLUT_BITMAP_HELVETICA_12)
@@ -887,6 +888,90 @@ def powerupsHitbox(player, collectible):
         abs(player.y - collectible.y) <= (player_size + collectible_size)
     )
 
+##draw minimap, point to show player and pwrups
+#switch to ortho
+def draw_minimap():
+    
+    global player,map   
+    glViewport(width-150, 0, 150, 150)
+    
+
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()    
+    glLoadIdentity()
+    gluOrtho2D(0, 200, 0, 200)  
+
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity() 
+    glDisable(GL_DEPTH_TEST) #enable later (minimap needs to be alsways drawn on top)
+
+    glColor3f(0.05, 0.05, 0.05)
+    glBegin(GL_QUADS)
+    glVertex2f(0, 0)
+    glVertex2f(200, 0)
+    glVertex2f(200, 200)
+    glVertex2f(0, 200)
+    glEnd()
+
+    
+    n = len(map)
+    cell_size = 200 / n
+    glColor3f(1, 1, 1)
+    glBegin(GL_QUADS)
+    for i in range(n):
+        for j in range(n):
+            if map[i][j] == 1:
+                x = i * cell_size
+                y = j * cell_size
+                glVertex2f(x, y)
+                glVertex2f(x + cell_size, y)
+                glVertex2f(x + cell_size, y + cell_size)
+                glVertex2f(x, y + cell_size)
+    glEnd()
+
+    #player and powerups
+    px = int((player.x // GRID_LENGTH) + n // 2) * cell_size
+    py = int((player.y // GRID_LENGTH) + n // 2) * cell_size
+
+    glColor3f(1, 0, 0)
+    glBegin(GL_QUADS)
+    glVertex2f(px - 3, py - 3)
+    glVertex2f(px + 3, py - 3)
+    glVertex2f(px + 3, py + 3)
+    glVertex2f(px - 3, py + 3)
+    glEnd()
+
+    
+    for p in powerups:
+        
+        px = int((p.x // GRID_LENGTH) + n // 2) * cell_size
+        py = int((p.y // GRID_LENGTH) + n // 2) * cell_size
+       
+        if p.type == 'speed':
+            glColor3f(0.0, 0.0, 1.0)  
+        elif p.type == 'range':
+                glColor3f(1.0, 1.0, 0.0)  
+        elif p.type == 'shield':
+             glColor3f(0.0, 1.0, 0.0)  
+        else:
+                glColor3f(1.0, 1.0, 1.0)
+        
+        glBegin(GL_QUADS)
+        glVertex2f(px - 2, py - 2)
+        glVertex2f(px + 2, py - 2)
+        glVertex2f(px + 2, py + 2)
+        glVertex2f(px - 2, py + 2)
+        glEnd()
+    
+    glEnable(GL_DEPTH_TEST)
+    glPopMatrix()
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
+    glMatrixMode(GL_MODELVIEW)
+    glViewport(0, 0, width, height)
+    
+    
 def idle():
     global game_state, player, introT, intro_str
     dt = delT()
@@ -937,9 +1022,12 @@ def showScreen():
         draw_creature(-500, -500, 0)
         for p in powerups:
             drawPowerups(p)
+        draw_minimap()
     elif game_state['mode']== 'over':
         draw_game_over()
 
+    
+    
     glutSwapBuffers()
 
 def main():
