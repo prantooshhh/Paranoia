@@ -103,8 +103,16 @@ controls = {'fw': False,
             'l': False,
             'r': False}
 
-game_state = {'over': False,
-              'cam': 'fpv'}
+game_state = {'mode': 'menu', #will handle intro > menu> playing and game over
+              'cam': 'fpv',
+
+              }
+intro_str = 0
+introT = time()
+
+flash = {'gun_fired': False,
+         'timer': 0.0,
+         'flash_duration': 0.1}
 
 def delT():
     global t1
@@ -158,8 +166,8 @@ def setupCamera():
         gluLookAt(cx, cy, cz, lx, ly, lz, 0, 0, 1)
 
     
-def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18): # type: ignore
-    glColor3f(1,1,1)
+def draw_text(x, y, text, font=GLUT_BITMAP_TIMES_ROMAN_24): # type: ignore
+    
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
     glLoadIdentity()
@@ -182,6 +190,51 @@ def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18): # type: ignore
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)
+
+##intro and menus (**change showscreen, keyboard, *menu should change when game over )
+
+#to display the intro;
+intro_str = 0
+intro_fps = 20
+introT = time()
+intro_text = ["You wake up surrounded by deafening silence and darkness.....",
+              "There's a torch and....a gun?",
+              "Suddenly there are distant sounds of quiet rustling and footsteps ",
+              '',
+              "The only way out is through.",
+              "", "",
+              "Press Enter to begin...."]
+
+def draw_intro():
+    global intro_str, intro_fps, introT, intro_text
+    
+    
+    char_count = 0
+    for i, text in enumerate(intro_text):
+        if intro_str > char_count:  
+            num_chars = min(len(text), intro_str - char_count)
+            if i == len(intro_text) - 1:
+                glColor3f(1, 0, 0)  
+            else:
+                glColor3f(1, 1, 1)  
+            draw_text(200, 500 - i*50, text[:num_chars])
+        char_count += len(text)
+        
+    
+    
+def draw_menu():
+    glColor3f(1,0 ,0 )
+    draw_text(400, 500, "PARANOIA", GLUT_BITMAP_TIMES_ROMAN_24)
+    draw_text(200, 300, "Press ENTER to Start",GLUT_BITMAP_HELVETICA_12)
+    draw_text(200, 270, "Use W-A-S_D to move around", GLUT_BITMAP_HELVETICA_12)
+    draw_text(200, 250, "Collect artifacts to use powerups", GLUT_BITMAP_HELVETICA_12)
+    draw_text(200, 230, "Right-click to fire", GLUT_BITMAP_HELVETICA_12)
+
+def draw_game_over():
+    draw_text(400, 400, "YOU ARE ELIMINATED")
+    draw_text(400, 350, "Waiting for match to finish...")
+    
+    
 
 # mapping the grid
 # 0 - black, 1 - wall, 2 - free space
@@ -494,7 +547,7 @@ def drawPlayer(p):
     glPushMatrix()
     
     # Apply player transform
-    if game_state['over']:
+    if game_state['mode'] == 'over':
         glRotatef(90, 0, 1, 0)  # Tilt if game over
     glTranslatef(p.x, p.y, p.z+50)
     glRotatef(p.angle, 0, 0, 1)
@@ -550,6 +603,17 @@ def drawPlayer(p):
     glRotatef(10, 0, 1, 0)            
     glColor3f(0.3, 0.3, 0.3)           
     gluCylinder(gluNewQuadric(), 0.05, 0.1, 0.8, 8, 2)
+    
+    
+    #create a global flash state for the gun flash. update mouse and idle
+    if flash['gun_fired']:
+        glPushMatrix()
+        glTranslate(0,0,-0.2)
+        s = 0.2 + random.uniform (-0.2, 0.2)
+        glScalef(s, s, s)
+        glColor3f(1.0, 1.0, 0.0)
+        glutSolidCone(0.5, 1.0, 12, 12)
+        glPopMatrix()
     glPopMatrix()
 
     glPopMatrix()
@@ -681,7 +745,16 @@ def specialKeyListener(key, x, y):
 
 def keyboardListener(key, x, y):
     global game_state, player
-    if not(game_state['over']):
+    
+    if game_state['mode'] == 'menu':
+        
+        if key == b'\r':
+            game_state['mode'] = 'intro'
+    elif game_state['mode'] == 'intro':
+        if key == b'\r':
+            game_state['mode'] = 'playing'
+            
+    if not(game_state['mode']== 'over'):
         if key == b'w': controls['fw'] = True
         if key == b's': controls['bw'] = True
         if key == b'a': controls['l'] = True
@@ -693,7 +766,7 @@ def keyboardListener(key, x, y):
 
 def keyboardUpListener(key, x, y):
     global game_state, player
-    if not(game_state['over']):
+    if not(game_state['mode'] == 'over'):
         if key == b'w': controls['fw'] = False
         if key == b's': controls['bw'] = False
         if key == b'a': controls['l'] = False
@@ -720,10 +793,11 @@ init_powerup = {'speed 1': 0,
 powerups = [Powerups(i) for i in init_powerup]
 
 def mouseListener(button, state, x, y):
-    global camera_pos, cam_radius, cam_angle, cam_height, player
+    global camera_pos, cam_radius, cam_angle, cam_height, player, flash
     if state == GLUT_DOWN:
         if button == GLUT_LEFT_BUTTON:
-            pass
+            flash['gun_fired'] = True
+            flash['timer'] = time()
 
 def drawPowerups(p):
     glPushMatrix()
@@ -753,21 +827,31 @@ def powerupsHitbox(player, collectible):
     )
 
 def idle():
-    global game_state, player
+    global game_state, player, introT, intro_str
     dt = delT()
 
-    # controls
-    if controls['fw']: player.goForward(dt)
-    if controls['bw']: player.goBackward(dt)
-    if controls['l']: player.rotateLeft(dt)
-    if controls['r']: player.rotateRight(dt)
+    if game_state['mode'] == 'playing':
+        # controls
+        if controls['fw']: player.goForward(dt)
+        if controls['bw']: player.goBackward(dt)
+        if controls['l']: player.rotateLeft(dt)
+        if controls['r']: player.rotateRight(dt)
 
-    # powerups
-    for p in powerups:
-            if powerupsHitbox(player, p):           # task: add sending to server. eg: speed1 should be sent to server
-                player.collectPowerup(p.type)
-                p.reset()                         # task: server sends new coords
+        # powerups
+        for p in powerups:
+                if powerupsHitbox(player, p):           # task: add sending to server. eg: speed1 should be sent to server
+                    player.collectPowerup(p.type)
+                    p.reset()                         # task: server sends new coords
         
+        # firing
+        if flash['gun_fired'] and (time()- flash['timer']) > flash['flash_duration']:
+            flash['gun_fired'] = False
+
+    elif game_state['mode'] == 'intro':
+        if time() - introT > 1 / intro_fps:
+            intro_str +=1
+            introT = time()
+
     glutPostRedisplay()
 
 def showScreen():
@@ -777,15 +861,23 @@ def showScreen():
     glLoadIdentity()  # Reset modelview matrix
     glViewport(0, 0, width, height)  # Set viewport size
 
-    setupCamera()  # Configure camera perspective
+    
 
     #grid()
     
-    drawPlayer(player)
-    drawMap()
-    draw_creature(-500, -500, 0)
-    for p in powerups:
-        drawPowerups(p)
+    if game_state['mode'] == 'intro':
+        draw_intro()
+    elif game_state['mode'] == 'menu':
+        draw_menu()
+    elif game_state['mode'] == 'playing':
+        setupCamera()  # Configure camera perspective
+        drawPlayer(player)
+        drawMap()
+        draw_creature(-500, -500, 0)
+        for p in powerups:
+            drawPowerups(p)
+    elif game_state['mode']== 'over':
+        draw_game_over()
 
     glutSwapBuffers()
 
