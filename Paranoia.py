@@ -668,13 +668,37 @@ def drawPlayer(p):
     glColor3f(0.5, 0.25, 0.1)     
     gluCylinder(gluNewQuadric(), 0.1, 0.1, 1.2, 8, 8)  #torch 
 
+    
     #fire
-    glTranslatef(0, 0, 1.2)      
-    glColor3f(1.0, 0.5, 0.0)       
-    glutSolidCube(0.4)
+    glTranslatef(0, 0, 1.2)
+    current_time=time()
+    
+    base_scale = 0.25
+    flicker1 = 0.1 * math.sin(current_time * 8.0)
+    flicker2 = 0.08 * math.sin(current_time * 6.3) 
+    flicker3 = 0.05 * math.sin(current_time * 4.7)
 
-    glPopMatrix() 
-    glPopMatrix()  
+
+    main_fire_scale = base_scale 
+    glPushMatrix()
+    glScalef(main_fire_scale, main_fire_scale, main_fire_scale + flicker3)
+    glColor3f(1.0, 0.5, 0.0) 
+    glutSolidCube(1.0)
+    glPopMatrix()
+
+    glPushMatrix()
+    glTranslatef(0, 0, 0.1) 
+    inner_fire_scale = (base_scale * 0.6) + (flicker2 * 0.4) + (flicker3 * 0.4)
+    glScalef(inner_fire_scale, inner_fire_scale, inner_fire_scale + (flicker1 * 0.3))
+    glColor3f(1.0, 0.2, 0.0) 
+    glutSolidCube(1.0)
+    glPopMatrix()
+
+    glPopMatrix()
+    glPopMatrix()
+
+    glColor3f(1.0, 0.5, 0.0)       
+    glutSolidCube(0.4) 
 
     #legs
     glPushMatrix()
@@ -938,4 +962,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
