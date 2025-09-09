@@ -323,7 +323,7 @@ def drawMap():
 
 
                 elif map[i][j] == 2:    # for free space use this as reference, for testing call drawBlock() in here
-                    drawTempBlock(i, j)
+                    drawBlock(i, j)
 
 def drawTempBlock(i, j):
     x = (i - len(map)//2) * GRID_LENGTH
@@ -342,7 +342,44 @@ def drawTempBlock(i, j):
     glEnd()
 
 def drawBlock(i, j):
-    pass
+    global GRID_LENGTH, map 
+    x = (i - len(map)//2) * GRID_LENGTH
+    y = (j - len(map)//2) * GRID_LENGTH
+    
+    glPushMatrix()
+    glTranslatef(x + 25, y - 25, 0)  
+
+    if (i + j) % 2 == 1:
+        glRotatef(90, 0, 0, 1)
+    
+
+    glBegin(GL_QUADS)
+    glColor3f(*colorFunc(x+25,y-25,0.6, 0.4, 0.2))  
+    glVertex3f(-25, -25, 0)   
+    glVertex3f(25, -25, 0)    
+    glVertex3f(25, 25, 0)     
+    glVertex3f(-25, 25, 0)    
+    glEnd()
+
+    glLineWidth(2.0)
+    glBegin(GL_LINES)
+    glColor3f(0,0,0) 
+    
+ 
+    glVertex3f(-20, -8, 0.1)
+    glVertex3f(20, -8, 0.1)
+ 
+    glVertex3f(-20, 0, 0.1)
+    glVertex3f(20, 0, 0.1)
+  
+    glVertex3f(-20, 8, 0.1)
+    glVertex3f(20, 8, 0.1)
+    
+    glVertex3f(-20, 16, 0.1)
+    glVertex3f(20, 16, 0.1)
+    
+    glEnd()
+    glPopMatrix()
 
 def drawWall(i, j):
     global GRID_LENGTH, map 
@@ -901,5 +938,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
