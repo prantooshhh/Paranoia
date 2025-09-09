@@ -19,6 +19,7 @@ fovY = 90
 t1 = time()
 
 GRID_LENGTH = 50
+PLAYER_RADIUS = 20
 
 controls = {'fw': False,
             'bw': False,
@@ -182,19 +183,7 @@ def drawMap():
         for j in range(len(player.active_blocks)):
             if player.active_blocks[i][j]:
                 if map[i][j] == 1:      # for wall use this as reference, for testing call drawWall() in here
-                    x = (i - len(map)//2) * GRID_LENGTH
-                    y = (j - len(map)//2) * GRID_LENGTH
-
-                    glBegin(GL_QUADS)
-                    if player.active_blocks[i][j] == 1:
-                        glColor3f(0.05, 0.05, 0.05) 
-                    if player.active_blocks[i][j] == 2:
-                        glColor3f(*colorFunc(x+25, y-25, 1, 1, 1))
-                    glVertex3f(x + GRID_LENGTH, y, 0)
-                    glVertex3f(x, y, 0)
-                    glVertex3f(x, y - GRID_LENGTH, 0)
-                    glVertex3f(x + GRID_LENGTH, y - GRID_LENGTH, 0)
-                    glEnd()
+                    drawWall(i, j)
 
                     # glPointSize(5)
                     # glBegin(GL_POINTS)
@@ -221,7 +210,21 @@ def drawMap():
 def drawBlock():
     pass
 
-def drawWall():
+def drawWall(i, j):
+    global GRID_LENGTH, map 
+    x = (i - len(map)//2) * GRID_LENGTH
+    y = (j - len(map)//2) * GRID_LENGTH
+    
+    glPushMatrix()
+    glTranslatef(x + 25, y - 25, 80)
+    glScalef(1, 1, 4)
+    glColor3f(.2,.2,.2)
+    # if player.active_blocks[i][j] == 1:
+    #     glColor3f(0.05, 0.05, 0.05) 
+    # if player.active_blocks[i][j] == 2:
+    #     glColor3f(*colorFunc(x+25, y-25, 1, 1, 1))
+    glutSolidCube(50)
+    glPopMatrix()
 
 
 sin_table = [math.sin(math.radians(a)) for a in range(360)]
@@ -233,7 +236,7 @@ class Player:
         self.x = -100
         self.y = 50
         self.z = 0
-        self.speed = 80
+        self.speed = 120
         self.view_range = 600
         self.active_blocks = np.zeros((len(map), len(map)), dtype=np.float32)
         self.activeBlocks()
@@ -254,10 +257,10 @@ class Player:
         next_i = int((next_x) // GRID_LENGTH + len(map)//2)
         next_j = int((next_y) // GRID_LENGTH + len(map)//2) + 1
 
-        next_i_offset_plus = int((next_x + 25) // GRID_LENGTH + len(map)//2)
-        next_j_offset_plus = int((next_y + 25) // GRID_LENGTH + len(map)//2) + 1
-        next_i_offset_minus = int((next_x - 25) // GRID_LENGTH + len(map)//2)
-        next_j_offset_minus = int((next_y - 25) // GRID_LENGTH + len(map)//2) + 1
+        next_i_offset_plus = int((next_x + 50) // GRID_LENGTH + len(map)//2)
+        next_j_offset_plus = int((next_y + 50) // GRID_LENGTH + len(map)//2) + 1
+        next_i_offset_minus = int((next_x - 50) // GRID_LENGTH + len(map)//2)
+        next_j_offset_minus = int((next_y - 50) // GRID_LENGTH + len(map)//2) + 1
 
         collision_x = False
         collision_y = False
@@ -491,6 +494,80 @@ def drawPlayer(p):
 
     glPopMatrix()
 
+def draw_creature(x, y, z):
+    global player
+    glPushMatrix()
+    ang = math.degrees(math.atan2(player.y - y, player.x - x)) + 90
+    glTranslatef(x, y, z)
+    glRotatef(ang, 0, 0, 1)
+    glScalef(1.3, 1.3, 1.3)
+    
+
+    glPushMatrix()
+    glTranslatef(0, 0, 90) 
+    glScalef(30, 20, 60)   
+    glColor3f(0.1, 0.1, 0.1)  
+    glutSolidCube(1)
+    glPopMatrix()
+    
+    # Head
+    glPushMatrix()
+    glTranslatef(0, 0, 135)  
+    glScalef(25, 25, 25)     
+    glColor3f(0.15, 0.15, 0.15)  
+    glutSolidCube(1)
+    glPopMatrix()
+    
+    # Left eye
+    glPushMatrix()
+    glTranslatef(-8, -15, 135) 
+    glScalef(4, 2, 4)
+    glColor3f(1.0, 0.0, 0.0) 
+    glutSolidCube(1.0)
+    glPopMatrix()
+    
+    # Right eye  
+    glPushMatrix()
+    glTranslatef(8, -15, 135)   
+    glScalef(4, 2, 4)
+    glColor3f(1.0, 0.0, 0.0)   #
+    glutSolidCube(1.0)
+    glPopMatrix()
+    
+    # Left arm
+    glPushMatrix()
+    glTranslatef(-20, 0, 80)    
+    glScalef(8, 8, 70)          
+    glColor3f(0.1, 0.1, 0.1)
+    glutSolidCube(1.0)
+    glPopMatrix()
+    
+    # Right arm
+    glPushMatrix()
+    glTranslatef(20, 0, 80)   
+    glScalef(8, 8, 70)        
+    glColor3f(0.1, 0.1, 0.1)
+    glutSolidCube(1.0)
+    glPopMatrix()
+    
+    # Left leg
+    glPushMatrix()
+    glTranslatef(-8, 0, 30)     
+    glScalef(8, 8, 60)          
+    glColor3f(0.1, 0.1, 0.1)
+    glutSolidCube(1.0)
+    glPopMatrix()
+    
+    # Right leg
+    glPushMatrix()
+    glTranslatef(8, 0, 30)     
+    glScalef(8, 8, 60)          
+    glColor3f(0.1, 0.1, 0.1)
+    glutSolidCube(1.0)
+    glPopMatrix()
+    
+    glPopMatrix()
+
 
 def specialKeyListener(key, x, y):
     global camera_pos, cam_angle, cam_radius, cam_height
@@ -562,7 +639,8 @@ def showScreen():
     
     drawPlayer(player)
     drawMap()
-       
+    draw_creature(-500, -500, 0)
+
     glutSwapBuffers()
 
 def main():
@@ -585,7 +663,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
