@@ -197,10 +197,11 @@ def drawMap():
                     y = (j - len(map)//2) * GRID_LENGTH
 
                     glBegin(GL_QUADS)
-                    if player.active_blocks[i][j] == 1:
-                        glColor3f(0.05, 0.05*0, 0.05*0) 
-                    if player.active_blocks[i][j] == 2:
-                        glColor3f(*colorFunc(x+25, y-25, 1, 0, 0))
+                    glColor3f(*colorFunc(x+25, y-25, 1, 0, 0))
+                    # if player.active_blocks[i][j] == 1:
+                    #     glColor3f(0.05, 0.05*0, 0.05*0) 
+                    # if player.active_blocks[i][j] == 2:
+                    #     glColor3f(*colorFunc(x+25, y-25, 1, 0, 0))
                     glVertex3f(x + GRID_LENGTH, y, 0)
                     glVertex3f(x, y, 0)
                     glVertex3f(x, y - GRID_LENGTH, 0)
@@ -218,7 +219,8 @@ def drawWall(i, j):
     glPushMatrix()
     glTranslatef(x + 25, y - 25, 80)
     glScalef(1, 1, 4)
-    glColor3f(.2,.2,.2)
+    glColor3f(*colorFunc(x+25, y-25, 1, 1, 1))
+    # glColor3f(.2,.2,.2)
     # if player.active_blocks[i][j] == 1:
     #     glColor3f(0.05, 0.05, 0.05) 
     # if player.active_blocks[i][j] == 2:
@@ -319,13 +321,15 @@ class Player:
             if 0 <= i < n and 0 <= j < n:
                 self.active_blocks[i, j] = 2
             
-view_angle = 60
+view_angle = 45
 def colorFunc(x, y, r, g, b):
     global player
     vx, vy = x-player.x, y-player.y
     dist = math.sqrt(vx**2 + vy**2)
 
-    if dist == 0:
+    if dist > 600:
+        bright = 0.05
+    elif dist == 0:
         bright = 1
     else:
         vx, vy = vx/dist, vy/dist
@@ -343,8 +347,8 @@ def colorFunc(x, y, r, g, b):
         bright = 0.05 + 0.95 * angle_fac * dist_fac
     return bright*r, bright*g, bright*b
 
-view_range=15
-view_angle=60
+view_range=5
+view_angle=45
 view_range_sq = view_range * view_range
 
 def findConeBlocks(x, y, dir_angle):
@@ -383,7 +387,7 @@ def findConeBlocks(x, y, dir_angle):
                         break
                 if not(sight_hit_wall):
                     blockij.add((x+dx, y+dy))
-                
+    # print(blockij)
     return blockij
 
 player = Player()
