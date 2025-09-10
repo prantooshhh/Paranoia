@@ -44,7 +44,7 @@ server_addr = (server_ip, server_port)
 
 def sendConnect():
     client.sendto(connect_msg.encode(format), server_addr)
-    data, _ = client.recvfrom(1024)
+    data, _ = client.recvfrom(65535)
     print(f"Server: {data.decode(format)}\n")
 
 sendConnect()
@@ -77,6 +77,7 @@ class Powerups:
     def __init__(self, name, pos):
         self.name = name
         self.type = name.split()[0]
+        self.taken = False
         self.x = (pos[0] - n//2) * GRID_LENGTH              # task: server will send these values initially
         self.y = (pos[1] - n//2) * GRID_LENGTH
         self.z = 30
@@ -89,7 +90,7 @@ powerups = None
 def sendCheckStart():
     global start, ip_addr, player_states, players, powerup_spawns, player_start, opps, powerups
     client.sendto(check_start_msg.encode(format), server_addr)
-    data, _ = client.recvfrom(1024)
+    data, _ = client.recvfrom(65535)
     data = data.decode(format)
 
     # setting player states and starting game
@@ -109,7 +110,7 @@ def sendCheckStart():
         for i in powerup_spawns_recv:
             p = i.split(',')
             px, py = int(p[0]), int(p[1])
-            powerup_spawns.append(px, py)
+            powerup_spawns.append((px, py))
         
         init_powerup = {'speed 1': powerup_spawns[0],
                 'speed 2': powerup_spawns[1],
@@ -119,7 +120,7 @@ def sendCheckStart():
                 'shield 2': powerup_spawns[5]}
         powerups = [Powerups(name, pos) for name, pos in init_powerup.items()]
 
-        player_start = list(map(int, player_start_recv))
+        player_start = list(map(int, player_start_recv.split(',')))
 
 # make opp class, pwclass, set player start pos
 
@@ -136,13 +137,15 @@ def sendrecvUpdate():
     client.sendto(update_send.encode(format), server_addr)
 
     # receiving updates
-    update_recv, _ = client.recvfrom(1024)
+    update_recv, _ = client.recvfrom(65535)
     update_recv = json.loads(update_recv)
 
     # exclude own update and update others state
     for opp, info in update_recv.items():
         if opp != ip_addr:
-            opps[opp].update(info['x'], info['y'], info['powerups_name'], info['shield'], info['killed'], info['alive'])
+            for i in opps:
+                if i.ip == opp:
+                    opps[opps.index(i)].update(info['x'], info['y'], info['powerups_name'], info['shield'], info['killed'], info['alive'])
 
 def sendInterval():
     global last_sent
