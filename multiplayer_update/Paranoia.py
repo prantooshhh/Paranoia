@@ -549,17 +549,17 @@ class Player:
         
         self.killed = []
         self.alive = True
-        self.speed = 120
+        self.speed = 140
         self.view_range = 450
         self.view_range_active = 5
         self.active_blocks = np.zeros((len(map), len(map)), dtype=np.float32)
         self.activeBlocks()
     
-    def rotateLeft(self, dt, ang=40):
+    def rotateLeft(self, dt, ang=50):
         self.angle += ang * dt
         self.activeBlocks()
 
-    def rotateRight(self, dt, ang=40):
+    def rotateRight(self, dt, ang=50):
         self.angle -= ang * dt
         self.activeBlocks()
 
@@ -1087,7 +1087,7 @@ def idle():
     glutPostRedisplay()
 
 def showScreen():
-    global width, height, player, opps, map, GRID_LENGTH
+    global width, height, player, opps, map, GRID_LENGTH, ip_addr
     # Clear color and depth buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()  # Reset modelview matrix
@@ -1109,14 +1109,22 @@ def showScreen():
         for p in powerups:
             if p.taken: continue
             drawPowerups(p)
+        win = True
         for opp in opps:
             if opp.x != None and opp.y != None:
                 i, j = int(opp.x//GRID_LENGTH + len(map)//2), int(opp.y//GRID_LENGTH + len(map)//2)
                 if player.active_blocks[i, j] == 2:
                     draw_creature(opp.x, opp.y, 0, opp.alive)
+            print(opp.ip, opp.alive)
+            if opp.alive and opp.ip != ip_addr:
+                win = False
+        if win: game_state['mode'] = 'won'
+
         draw_minimap()
     elif game_state['mode']== 'over':
         draw_game_over()
+    elif game_state['mode'] == 'won':
+        draw_winner()
     
     glutSwapBuffers()
 
