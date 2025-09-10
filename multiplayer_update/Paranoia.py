@@ -69,6 +69,12 @@ class Opp:
         self.alive = alive
         for p in powerups:
             if p.name in powerups_name: p.taken = True
+        for k in killed:
+            if player.ip in killed: player.alive = False
+            for opp in opps:
+                if opp.ip in killed:
+                    opp.alive = False
+
 
 
 n = 102                                 # len(map)
@@ -149,7 +155,7 @@ def sendrecvUpdate():
 
 def sendInterval():
     global last_sent
-    if time() >= last_sent + 5: # todo: change this to last_sent+0.05
+    if time() >= last_sent + 0.05: # todo: change this to last_sent+0.05
         last_sent = time()
         return True
 
@@ -526,8 +532,9 @@ sin_table = [math.sin(math.radians(a)) for a in range(360)]
 cos_table = [math.cos(math.radians(a)) for a in range(360)]
 
 class Player:
-    global GRID_LENGTH, wall_coords, player_start
+    global GRID_LENGTH, wall_coords, player_start, ip_addr
     def __init__(self):
+        self.ip = ip_addr
         self.angle = 0
         self.x = (player_start[0] - len(map)//2) * GRID_LENGTH
         self.y = (player_start[1] - len(map)//2) * GRID_LENGTH
@@ -801,10 +808,11 @@ def drawPlayer(p):
 
     glPopMatrix()
 
-def draw_creature(x, y, z):
+def draw_creature(x, y, z, alive):
     global player
     glPushMatrix()
     ang = math.degrees(math.atan2(player.y - y, player.x - x)) + 90
+    if not(alive): glRotatef(90, 0, 1, 0)
     glTranslatef(x, y, z)
     glRotatef(ang, 0, 0, 1)
     glScalef(1.3, 1.3, 1.3)
@@ -927,6 +935,12 @@ def mouseListener(button, state, x, y):
         if button == GLUT_LEFT_BUTTON:
             flash['gun_fired'] = True
             flash['timer'] = time()
+            for opp in opps:
+                if opp.x != None and opp.y != None:
+                    i, j = int(opp.x//GRID_LENGTH + len(map)//2), int(opp.y//GRID_LENGTH + len(map)//2)
+                    if player.active_blocks[i, j] == 2:
+                        opp.alive = False
+                        player.killed.append(opp.ip)
 
 def drawPowerups(p):
     glPushMatrix()
@@ -1058,6 +1072,7 @@ def idle():
                 if powerupsHitbox(player, p):           # task: add sending to server. eg: speed1 should be sent to server
                     player.powerups_name.append(p.name)
                     player.collectPowerup(p.type)
+                    p.taken = True
         
         # firing
         if flash['gun_fired'] and (time()- flash['timer']) > flash['flash_duration']:
@@ -1071,7 +1086,7 @@ def idle():
     glutPostRedisplay()
 
 def showScreen():
-    global width, height, player
+    global width, height, player, opps, map, GRID_LENGTH
     # Clear color and depth buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()  # Reset modelview matrix
@@ -1080,6 +1095,7 @@ def showScreen():
     
 
     #grid()
+    if not(player.alive): game_state['mode'] = 'over'
     
     if game_state['mode'] == 'intro':
         draw_intro()
@@ -1089,15 +1105,17 @@ def showScreen():
         setupCamera()  # Configure camera perspective
         drawPlayer(player)
         drawMap()
-        draw_creature(-500, -500, 0)
         for p in powerups:
             if p.taken: continue
             drawPowerups(p)
+        for opp in opps:
+            if opp.x != None and opp.y != None:
+                i, j = int(opp.x//GRID_LENGTH + len(map)//2), int(opp.y//GRID_LENGTH + len(map)//2)
+                if player.active_blocks[i, j] == 2:
+                    draw_creature(opp.x, opp.y, 0, opp.alive)
         draw_minimap()
     elif game_state['mode']== 'over':
         draw_game_over()
-
-    
     
     glutSwapBuffers()
 
