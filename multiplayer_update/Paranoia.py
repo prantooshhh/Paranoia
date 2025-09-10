@@ -56,15 +56,15 @@ class Opp:
         self.x = 0
         self.y = 0
         self.powerups_name = []
-        self.shield = False
+        
         self.killed = []
         self.alive = True
-    def update(self, x, y, powerups_name, shield, killed, alive):
+    def update(self, x, y, powerups_name,  killed, alive):
         global powerups
         self.x = x
         self.y = y
         self.powerups_name = powerups_name
-        self.shield = shield
+        
         self.killed = killed
         self.alive = alive
         for p in powerups:
@@ -120,10 +120,11 @@ def sendCheckStart():
         
         init_powerup = {'speed 1': powerup_spawns[0],
                 'speed 2': powerup_spawns[1],
-                'range 1': powerup_spawns[2],
-                'range 2': powerup_spawns[3],
-                'shield 1': powerup_spawns[4],
-                'shield 2': powerup_spawns[5]}
+                'speed 3': powerup_spawns[2],
+                'range 1': powerup_spawns[3],
+                'range 2': powerup_spawns[4],
+                'range 3': powerup_spawns[5]}
+               
         powerups = [Powerups(name, pos) for name, pos in init_powerup.items()]
 
         player_start = list(map(int, player_start_recv.split(',')))
@@ -136,7 +137,7 @@ def sendrecvUpdate():
     update_send = {'x': player.x, 
                    'y': player.y,
                    'powerups_name': player.powerups_name,
-                   'shield': player.shield,
+                  
                    'killed': player.killed,
                    'alive': player.alive}
     update_send = json.dumps(update_send)
@@ -151,7 +152,7 @@ def sendrecvUpdate():
         if opp != ip_addr:
             for i in opps:
                 if i.ip == opp:
-                    opps[opps.index(i)].update(info['x'], info['y'], info['powerups_name'], info['shield'], info['killed'], info['alive'])
+                    opps[opps.index(i)].update(info['x'], info['y'], info['powerups_name'], info['killed'], info['alive'])
 
 def sendInterval():
     global last_sent
@@ -312,10 +313,14 @@ def draw_menu():
     draw_text(200, 230, "Right-click to fire", GLUT_BITMAP_HELVETICA_12)
 
 def draw_game_over():
+    glColor3f(1,0 ,0 )
     draw_text(400, 400, "YOU ARE ELIMINATED")
     draw_text(400, 350, "Waiting for match to finish...")
     
-    
+def draw_winner():
+    glColor3f(0,1,0 )
+    draw_text(400, 400, "Congratulations....")
+
 
 # mapping the grid
 # 0 - black, 1 - wall, 2 - free space
@@ -541,7 +546,7 @@ class Player:
         self.z = 0
         self.powerups = []
         self.powerups_name = []
-        self.shield = False
+        
         self.killed = []
         self.alive = True
         self.speed = 120
@@ -635,8 +640,7 @@ class Player:
             self.view_range = 650
             self.view_range_active = 7
             pass
-        elif p_type == 'shield':
-            pass
+       
         self.powerups.append(p_type)
 
 player = Player()
@@ -946,17 +950,15 @@ def drawPowerups(p):
     glPushMatrix()
     glTranslatef(p.x, p.y, p.z)
     
-    if p.type == 'speed':             
-        glColor3f(0.0, 0.0, 1.0)              
-        gluCylinder(gluNewQuadric(), 25, 5, 50, 20, 10) 
+    if p.type == 'speed':
+        glColor3f(0.0,1.0,0.0)
+        glutSolidCube(40)
 
     elif p.type == "range":
         glColor3f(1.0, 1.0, 0.0)   
         glutSolidSphere(25, 12, 12)
 
-    elif p.type == 'shield':
-        glColor3f(1.0,0.8,0.8)
-        glutSolidCube(40)
+    
 
     glPopMatrix()
 
@@ -1029,11 +1031,10 @@ def draw_minimap():
         py = int((p.y // GRID_LENGTH) + n // 2) * cell_size
        
         if p.type == 'speed':
-            glColor3f(0.0, 0.0, 1.0)  
+            glColor3f(0.0, 1.0, 0.0)  
         elif p.type == 'range':
             glColor3f(1.0, 1.0, 0.0)  
-        elif p.type == 'shield':
-            glColor3f(0.0, 1.0, 0.0)  
+          
         else:
             glColor3f(1.0, 1.0, 1.0)
         
