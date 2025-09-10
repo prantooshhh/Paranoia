@@ -83,7 +83,7 @@ class Powerups:
 
 players = None
 powerup_spawns = []
-player_start = None
+player_start = [0, 0]
 opps = None
 powerups = None
 def sendCheckStart():
@@ -94,6 +94,7 @@ def sendCheckStart():
 
     # setting player states and starting game
     if data != not_start_msg:
+        print('gg')
         start = True
         data = data.split('-')
         players_recv = data[0].split()
@@ -148,6 +149,10 @@ def sendInterval():
     if time() >= last_sent + 5: # todo: change this to last_sent+0.05
         last_sent = time()
         return True
+
+while not(start):
+    if sendInterval():
+        sendCheckStart()
 
 # game
 width, height = 1200, 690
