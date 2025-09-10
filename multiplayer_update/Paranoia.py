@@ -22,7 +22,6 @@ not_start_msg = 'wait'
 last_sent = time()
 
 start = False
-player_states = {}
 
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -50,11 +49,45 @@ def sendConnect():
 
 sendConnect()
 
+
+class Opp:
+    def __init__(self, ip):
+        self.ip = ip
+        self.x = 0
+        self.y = 0
+        self.powerups_name = []
+        self.shield = False
+        self.killed = []
+        self.alive = True
+    def update(self, x, y, powerups_name, shield, killed, alive):
+        global powerups
+        self.x = x
+        self.y = y
+        self.powerups_name = powerups_name
+        self.shield = shield
+        self.killed = killed
+        self.alive = alive
+        for p in powerups:
+            if p.name in powerups_name: p.taken = True
+
+
+n = 102                                 # len(map)
+GRID_LENGTH = 50
+class Powerups:
+    def __init__(self, name, pos):
+        self.name = name
+        self.type = name.split()[0]
+        self.x = (pos[0] - n//2) * GRID_LENGTH              # task: server will send these values initially
+        self.y = (pos[1] - n//2) * GRID_LENGTH
+        self.z = 30
+
 players = None
-powerup_spawns = None
+powerup_spawns = []
 player_start = None
+opps = None
+powerups = None
 def sendCheckStart():
-    global start, ip_addr, player_states, players, powerup_spawns, player_start
+    global start, ip_addr, player_states, players, powerup_spawns, player_start, opps, powerups
     client.sendto(check_start_msg.encode(format), server_addr)
     data, _ = client.recvfrom(1024)
     data = data.decode(format)
@@ -63,13 +96,29 @@ def sendCheckStart():
     if data != not_start_msg:
         start = True
         data = data.split('-')
-        players = data[0].split()
-        powerup_spawns = data[1].split()
-        player_start = data[2]
-        for opp in players:
-            if opp != ip_addr:
-                player_states[opp] = {'x': None,                             # task: what will we pass
-                                         'y': None}
+        players_recv = data[0].split()
+        powerup_spawns_recv = data[1].split()
+        player_start_recv = data[2]
+        players = players_recv[:]
+
+        # init opponents
+        opps = [Opp(i) for i in players]
+        
+        # init powerups
+        for i in powerup_spawns_recv:
+            p = i.split(',')
+            px, py = int(p[0]), int(p[1])
+            powerup_spawns.append(px, py)
+        
+        init_powerup = {'speed 1': powerup_spawns[0],
+                'speed 2': powerup_spawns[1],
+                'range 1': powerup_spawns[2],
+                'range 2': powerup_spawns[3],
+                'shield 1': powerup_spawns[4],
+                'shield 2': powerup_spawns[5]}
+        powerups = [Powerups(name, pos) for name, pos in init_powerup.items()]
+
+        player_start = list(map(int, player_start_recv))
 
 # make opp class, pwclass, set player start pos
 
@@ -77,7 +126,11 @@ def sendrecvUpdate():
     global player
     # sending update of own
     update_send = {'x': player.x, 
-                   'y': player.y}
+                   'y': player.y,
+                   'powerups_name': player.powerups_name,
+                   'shield': player.shield,
+                   'killed': player.killed,
+                   'alive': player.alive}
     update_send = json.dumps(update_send)
     client.sendto(update_send.encode(format), server_addr)
 
@@ -88,8 +141,7 @@ def sendrecvUpdate():
     # exclude own update and update others state
     for opp, info in update_recv.items():
         if opp != ip_addr:
-            player_states[opp]['x'] = info['x']                              # task: update the attributes
-            player_states[opp]['y'] = info['y']
+            opps[opp].update(info['x'], info['y'], info['powerups_name'], info['shield'], info['killed'], info['alive'])
 
 def sendInterval():
     global last_sent
@@ -324,13 +376,13 @@ def drawMap():
     global GRID_LENGTH, map, player
     grid_mid = GRID_LENGTH/2
 
-    m = (2 - len(map)//2) * GRID_LENGTH
-    n = (2 - len(map)//2) * GRID_LENGTH
-    glPointSize(10)
-    glBegin(GL_POINTS)
-    glColor3f(1, 0, 0)
-    glVertex3f(m+25, n-25, 0) # center point of the block
-    glEnd()
+    # m = (2 - len(map)//2) * GRID_LENGTH
+    # n = (2 - len(map)//2) * GRID_LENGTH
+    # glPointSize(10)
+    # glBegin(GL_POINTS)
+    # glColor3f(1, 0, 0)
+    # glVertex3f(m+25, n-25, 0) # center point of the block
+    # glEnd()
 
     for i in range(len(player.active_blocks)):
         for j in range(len(player.active_blocks)):
@@ -466,13 +518,17 @@ sin_table = [math.sin(math.radians(a)) for a in range(360)]
 cos_table = [math.cos(math.radians(a)) for a in range(360)]
 
 class Player:
-    global GRID_LENGTH, wall_coords
+    global GRID_LENGTH, wall_coords, player_start
     def __init__(self):
         self.angle = 0
-        self.x = -100
-        self.y = 50
+        self.x = (player_start[0] - len(map)//2) * GRID_LENGTH
+        self.y = (player_start[1] - len(map)//2) * GRID_LENGTH
         self.z = 0
         self.powerups = []
+        self.powerups_name = []
+        self.shield = False
+        self.killed = []
+        self.alive = True
         self.speed = 120
         self.view_range = 450
         self.view_range_active = 5
@@ -857,26 +913,6 @@ def keyboardUpListener(key, x, y):
         if key == b'a': controls['l'] = False
         if key == b'd': controls['r'] = False
 
-class Powerups:
-    def __init__(self, name):
-        self.name = name
-        self.type = name.split()[0]
-        self.x = random.uniform(-GRID_LENGTH* 20, GRID_LENGTH*20)               # task: server will send these values initially
-        self.y = random.uniform(-GRID_LENGTH * 20, GRID_LENGTH*20)
-        self.z = 30
-    
-    def reset(self):
-        self.x = random.uniform(-GRID_LENGTH* 20, GRID_LENGTH*20)               # task: server will update these values when 
-        self.y = random.uniform(-GRID_LENGTH * 20, GRID_LENGTH*20)
-
-init_powerup = {'speed 1': 0,
-                'speed 2': 0,
-                'range 1': 0,
-                'range 2': 0,
-                'speed 1': 0,
-                'speed 2': 0}
-powerups = [Powerups(i) for i in init_powerup]
-
 def mouseListener(button, state, x, y):
     global camera_pos, cam_radius, cam_angle, cam_height, player, flash
     if state == GLUT_DOWN:
@@ -1010,9 +1046,10 @@ def idle():
 
         # powerups
         for p in powerups:
+                if p.taken: continue
                 if powerupsHitbox(player, p):           # task: add sending to server. eg: speed1 should be sent to server
+                    player.powerups_name.append(p.name)
                     player.collectPowerup(p.type)
-                    p.reset()                         # task: server sends new coords
         
         # firing
         if flash['gun_fired'] and (time()- flash['timer']) > flash['flash_duration']:
@@ -1046,6 +1083,7 @@ def showScreen():
         drawMap()
         draw_creature(-500, -500, 0)
         for p in powerups:
+            if p.taken: continue
             drawPowerups(p)
         draw_minimap()
     elif game_state['mode']== 'over':

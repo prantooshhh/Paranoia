@@ -91,7 +91,7 @@ def genPowerupSpawns():
     return ' '.join(powerup_spawns)
 
 powerup_spawns = genPowerupSpawns()
-
+print(f"{powerup_spawns}-{player_spawns[0]}")
 # Create UDP socket
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -140,7 +140,11 @@ def handleMessage(message, client_addr):
 # done till here
     elif message == connect_msg:
         player_states[player] = {'x': None,
-                                 'y': None}
+                                 'y': None,
+                                 'powerups_name': [],
+                                 'shield': False,
+                                 'killed': [],
+                                 'alive': True}
         server.sendto(CONNECT_REPLY_MSG.encode(format), client_addr)
         print(f"{player} has connected to LAN.")
         
@@ -156,6 +160,10 @@ def handleMessage(message, client_addr):
         #     player_states[player][key] = update[key]
         player_states[player]['x'] = update_recv['x']
         player_states[player]['y'] = update_recv['y']
+        player_states[player]['powerups_name'] = update_recv['powerups_name']
+        player_states[player]['shield'] = update_recv['shield']
+        player_states[player]['killed'] = update_recv['killed']
+        player_states[player]['alive'] = update_recv['alive']
 
         # sending updates
         update_send = json.dumps(player_states)
