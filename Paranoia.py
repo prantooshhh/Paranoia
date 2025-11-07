@@ -11,6 +11,7 @@ import numpy as np
 import json
 from time import time
 import socket
+import threading
 
 format = "utf-8"
 server_port = 8000
@@ -56,7 +57,6 @@ class Opp:
         self.x = 0
         self.y = 0
         self.powerups_name = []
-        
         self.killed = []
         self.alive = True
     def update(self, x, y, powerups_name,  killed, alive):
@@ -546,6 +546,7 @@ class Player:
         self.z = 0
         self.powerups = []
         self.powerups_name = []
+        self.reloading = False
         
         self.killed = []
         self.alive = True
@@ -642,6 +643,9 @@ class Player:
             pass
        
         self.powerups.append(p_type)
+    
+    def reload(self):
+        self.reloading = False
 
 player = Player()
 
@@ -937,14 +941,17 @@ def mouseListener(button, state, x, y):
     global camera_pos, cam_radius, cam_angle, cam_height, player, flash
     if state == GLUT_DOWN:
         if button == GLUT_LEFT_BUTTON:
-            flash['gun_fired'] = True
-            flash['timer'] = time()
-            for opp in opps:
-                if opp.x != None and opp.y != None:
-                    i, j = int(opp.x//GRID_LENGTH + len(map)//2), int(opp.y//GRID_LENGTH + len(map)//2)
-                    if player.active_blocks[i, j] == 2:
-                        opp.alive = False
-                        player.killed.append(opp.ip)
+            if not(player.reloading):
+                flash['gun_fired'] = True
+                flash['timer'] = time()
+                player.reloading = True
+                threading.Timer(2.0, player.reload).start()
+                for opp in opps:
+                    if opp.x != None and opp.y != None:
+                        i, j = int(opp.x//GRID_LENGTH + len(map)//2), int(opp.y//GRID_LENGTH + len(map)//2)
+                        if player.active_blocks[i, j] == 2:
+                            opp.alive = False
+                            player.killed.append(opp.ip)
 
 def drawPowerups(p):
     glPushMatrix()
