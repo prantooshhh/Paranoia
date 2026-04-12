@@ -33,7 +33,7 @@ source .venv/bin/activate
 
 4. Install dependencies:
 ```bash
-pip install PyOpenGL PyOpenGL_accelerate numpy
+pip install -r requirements.txt
 ```
 
 ## Running the Game
