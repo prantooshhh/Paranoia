@@ -35,6 +35,15 @@ class CameraState:
         y = self.radius * math.sin(self.angle)
         return (x, y, self.height)
 
+
+@dataclass
+class FlashState:
+    """Muzzle-flash display state."""
+    gun_fired:      bool  = False
+    timer:          float = 0.0
+    flash_duration: float = GUN_FLASH_DURATION
+
+
 @dataclass
 class GameState:
     """Top-level game mode and camera-mode selector."""
@@ -43,3 +52,4 @@ class GameState:
 
     controls: Controls    = field(default_factory=Controls)
     camera:   CameraState = field(default_factory=CameraState)
+    flash:    FlashState  = field(default_factory=FlashState)

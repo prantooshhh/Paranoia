@@ -3,6 +3,11 @@ entities/player.py
 Local player entity: state, movement, collision, and vision cone.
 """
 
+"""
+entities/player.py
+Local player entity: state, movement, collision, and vision cone.
+"""
+
 from __future__ import annotations
 
 import math
@@ -117,6 +122,16 @@ class Player:
         for i, j in find_cone_blocks(pxi, pyi, p_angle, self):
             if 0 <= i < n and 0 <= j < n:
                 self.active_blocks[i, j] = 2
+
+    # ── Powerups ─────────────────────────────────────────────────────────────
+
+    def collect_powerup(self, p_type: str) -> None:
+        if p_type == "speed":
+            self.speed = min(self.speed + SPEED_BOOST, SPEED_MAX)
+        elif p_type == "range":
+            self.view_range        = RANGE_BOOST
+            self.view_range_active = RANGE_ACTIVE_BOOST
+        self.powerups.append(p_type)
 
     # ── Gun ──────────────────────────────────────────────────────────────────
 
