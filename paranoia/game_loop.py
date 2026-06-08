@@ -35,6 +35,19 @@ if TYPE_CHECKING:
     from paranoia.game_state        import GameState
     from paranoia.network           import NetworkClient
 
+
+# ── Powerup proximity check ───────────────────────────────────────────────
+
+def _powerup_hitbox(player: Player, collectible: Powerup) -> bool:
+    """Return True when the player is close enough to collect the powerup."""
+    player_size     = 20
+    collectible_size = 15
+    return (
+        abs(player.x - collectible.x) <= player_size + collectible_size
+        and abs(player.y - collectible.y) <= player_size + collectible_size
+    )
+
+
 # ── Delta-time tracker ────────────────────────────────────────────────────
 
 class _DeltaTimer:
@@ -74,6 +87,22 @@ def make_idle(
             if gs.controls.bw: player.go_backward(dt)
             if gs.controls.l:  player.rotate_left(dt)
             if gs.controls.r:  player.rotate_right(dt)
+
+            # Powerup collection
+            for p in powerups:
+                if p.taken:
+                    continue
+                if _powerup_hitbox(player, p):
+                    player.powerups_name.append(p.name)
+                    player.collect_powerup(p.type)
+                    p.taken = True
+
+            # Clear muzzle flash after its duration
+            if gs.flash.gun_fired and (time() - gs.flash.timer) > GUN_FLASH_DURATION:
+                gs.flash.gun_fired = False
+
+        elif gs.mode == "intro":
+            gs.intro.tick()
 
         glutPostRedisplay()
 
@@ -129,6 +158,14 @@ def make_show_screen(
 
             if not all_alive_opponents and not TESTING:
                 gs.mode = "won"
+
+            draw_minimap(width, height, player, powerups)
+
+        elif gs.mode == "over":
+            draw_game_over()
+
+        elif gs.mode == "won":
+            draw_winner()
 
         glutSwapBuffers()
 
