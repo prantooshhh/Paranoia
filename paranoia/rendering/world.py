@@ -43,4 +43,32 @@ def draw_wall(i: int, j: int, player: Player) -> None:
     glPopMatrix()
 
 
+def draw_block(i: int, j: int, player: Player) -> None:
+    """Draw a single floor tile at grid position (i, j)."""
+    x = (i - len(GAME_MAP) // 2) * GRID_LENGTH
+    y = (j - len(GAME_MAP) // 2) * GRID_LENGTH
 
+    glPushMatrix()
+    glTranslatef(x + 25, y - 25, 0)
+
+    if (i + j) % 2 == 1:
+        glRotatef(90, 0, 0, 1)
+
+    glBegin(GL_QUADS)
+    glColor3f(*color_func(x + 25, y - 25, 0.6, 0.4, 0.2, player))
+    glVertex3f(-25, -25, 0)
+    glVertex3f( 25, -25, 0)
+    glVertex3f( 25,  25, 0)
+    glVertex3f(-25,  25, 0)
+    glEnd()
+
+    # Floor tile grain lines
+    glLineWidth(2.0)
+    glBegin(GL_LINES)
+    glColor3f(0, 0, 0)
+    for offset in (-8, 0, 8, 16):
+        glVertex3f(-20, offset, 0.1)
+        glVertex3f( 20, offset, 0.1)
+    glEnd()
+
+    glPopMatrix()
