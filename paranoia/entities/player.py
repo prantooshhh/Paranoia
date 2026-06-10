@@ -3,11 +3,6 @@ entities/player.py
 Local player entity: state, movement, collision, and vision cone.
 """
 
-"""
-entities/player.py
-Local player entity: state, movement, collision, and vision cone.
-"""
-
 from __future__ import annotations
 
 import math
